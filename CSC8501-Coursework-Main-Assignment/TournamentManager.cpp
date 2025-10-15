@@ -1,5 +1,6 @@
 #include "TournamentManager.h"
 #include <algorithm>
+#include <cmath>
 #include <iterator>
 #include <map>
 #include <numeric>
@@ -24,11 +25,11 @@ namespace ipd {
         std::vector<MatchPair> generateMatchPairs(const std::vector<std::string>& strategyNames) {
             std::vector<MatchPair> pairs;
             pairs.reserve(strategyNames.size() * strategyNames.size());
-            std::for_each(strategyNames.begin(), strategyNames.end(), [&](const std::string& firstName) {
+            for (const auto& firstName : strategyNames) {
                 std::transform(strategyNames.begin(), strategyNames.end(), std::back_inserter(pairs), [&](const std::string& secondName) {
                     return MatchPair{ firstName, secondName };
-                });
-            });
+                    });
+            }
             return pairs;
         }
 
@@ -47,18 +48,23 @@ namespace ipd {
                 const auto& aggregate = entry.second;
                 const double mean = statistics::mean(aggregate.scores);
                 const double variance = statistics::variance(aggregate.scores, mean);
+                const double stdev = std::sqrt(variance);
                 const auto [ciLow, ciHigh] = statistics::confidenceInterval95(aggregate.scores, mean);
 
                 Result result;
                 result.strategy = name;
                 result.mean = mean;
                 result.variance = variance;
+                result.stdev = stdev;
                 result.ciLow = ciLow;
                 result.ciHigh = ciHigh;
                 result.complexity = aggregate.complexity.value_or(0.0);
                 result.samples = aggregate.scores.size();
                 return result;
-            });
+                });
+            std::sort(results.begin(), results.end(), [](const Result& lhs, const Result& rhs) {
+                return lhs.mean > rhs.mean;
+                });
             return results;
         }
     }
@@ -79,7 +85,7 @@ namespace ipd {
 
         std::map<std::string, StrategyAggregate> aggregates;
 
-        Match match(config.payoff, config.noise);
+        Match match(config.payoffs, config.epsilon);
 
         const auto matchPairs = generateMatchPairs(config.strategyNames);
         if (matchPairs.empty()) {

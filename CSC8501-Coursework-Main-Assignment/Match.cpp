@@ -1,7 +1,7 @@
 #include "Match.h"
 namespace ipd {
-    Match::Match(const Payoff& payoff, double noiseProbability)
-        : m_payoff(payoff), m_noise(noiseProbability) {
+    Match::Match(const Payoff& payoff, double epsilon)
+        : m_payoff(payoff), m_epsilon(epsilon) {
     }
 
     MatchReport Match::play(Strategy& first, Strategy& second, int rounds, Random& rng) {
@@ -14,11 +14,11 @@ namespace ipd {
             Move moveFirst = first.nextMove(report.state, 0, rng);
             Move moveSecond = second.nextMove(report.state, 1, rng);
 
-            if (m_noise > 0.0) {
-                if (rng.nextBool(m_noise)) {
+            if (m_epsilon > 0.0) {
+                if (rng.nextBool(m_epsilon)) {
                     moveFirst = flip(moveFirst);
                 }
-                if (rng.nextBool(m_noise)) {
+                if (rng.nextBool(m_epsilon)) {
                     moveSecond = flip(moveSecond);
                 }
             }

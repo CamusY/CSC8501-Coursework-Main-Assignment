@@ -8,6 +8,7 @@ namespace ipd {
         std::string strategy;
         double mean = 0.0;
         double variance = 0.0;
+        double stdev = 0.0;
         double ciLow = 0.0;
         double ciHigh = 0.0;
         double complexity = 0.0;

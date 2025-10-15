@@ -1,6 +1,5 @@
 ﻿#include <exception>
 #include <iostream>
-#include <memory>
 #include <vector>
 
 #include "Config.h"
@@ -18,28 +17,24 @@ int main(int argc, char** argv) {
         }
 
         std::vector<ipd::Result> results;
-        if (config.generations > 0) {
+        std::vector<ipd::GenerationShare> history;
+
+        if (config.evolve || config.generations > 0) {
             ipd::EvolutionManager evolution;
-            results = evolution.run(config);
+            ipd::EvolutionOutcome outcome = evolution.run(config);
+            results = std::move(outcome.results);
+            history = std::move(outcome.history);
+            ipd::writeEvolutionSharesCsv(config, history);
         }
         else {
             ipd::TournamentManager tournament;
             results = tournament.run(config);
         }
 
-        std::vector<ipd::ReporterPtr> reporters;
-        reporters.push_back(ipd::makeConsoleReporter());
-        if (config.outputFormat == "csv" || config.outputFormat == "both") {
-            reporters.push_back(ipd::makeCsvReporter(config.outputFile));
-        }
+        ipd::reportResults(config, results, history);
 
-        for (auto& reporter : reporters) {
-            if (config.generations > 0) {
-                reporter->reportEvolution(config, results);
-            }
-            else {
-                reporter->reportTournament(config, results);
-            }
+        if (!config.saveFile.empty()) {
+            config.saveToJson(config.saveFile);
         }
     }
     catch (const std::exception& ex) {

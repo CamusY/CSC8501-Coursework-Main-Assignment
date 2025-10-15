@@ -14,7 +14,7 @@ namespace ipd {
 
     class Match {
     public:
-        Match(const Payoff& payoff, double noiseProbability);
+        Match(const Payoff& payoff, double epsilon);
 
         MatchReport play(Strategy& first, Strategy& second, int rounds, Random& rng);
 
@@ -22,6 +22,6 @@ namespace ipd {
         double evaluateRound(Move first, Move second) const;
 
         Payoff m_payoff;
-        double m_noise;
+        double m_epsilon;
     };
 }

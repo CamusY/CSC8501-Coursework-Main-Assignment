@@ -1,143 +1,534 @@
-#include "Config.h"
+﻿#include "Config.h"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
+#include <cmath>
 #include <cstdlib>
-#include <stdexcept>
-#include <string>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <iterator>
+#include <map>
+#include <optional>
+#include <sstream>
 #include <string_view>
+#include <tuple>
+#include <vector>
+#include <stdexcept>
 
 namespace ipd {
     namespace {
-        bool startsWith(std::string_view value, std::string_view prefix) {
-            return value.substr(0, prefix.size()) == prefix;
+        using OptionalString = std::optional<std::string>;
+
+        struct ConfigOverrides {
+            std::optional<int> rounds;
+            std::optional<int> repeats;
+            std::optional<double> epsilon;
+            std::optional<unsigned int> seed;
+            std::optional<Payoff> payoffs;
+            std::optional<std::vector<std::string>> strategies;
+            std::optional<int> generations;
+            std::optional<int> population;
+            std::optional<double> mutation;
+            std::optional<double> complexityPenalty;
+            std::optional<std::string> format;
+            std::optional<std::string> output;
+            std::optional<bool> verbose;
+            std::optional<bool> evolve;
+            OptionalString saveFile;
+            OptionalString loadFile;
+        };
+
+        void exitWithError(const std::string& message) {
+            std::cerr << message << '\n';
+            std::exit(1);
         }
 
-        std::string_view trim(std::string_view value) {
-            while (!value.empty() && std::isspace(static_cast<unsigned char>(value.front()))) {
-                value.remove_prefix(1);
-            }
+        void printHelpAndExit() {
+            std::cout <<
+                "Usage: ipd [options]\n"
+                "  --rounds N\n"
+                "  --repeats N\n"
+                "  --epsilon FLOAT             # noise probability per move (0..1)\n"
+                "  --strategies LIST           # e.g. ALLC,ALLD,TFT,GRIM,PAVLOV,RND(0.3),CTFT,PROBER,Empath,Reflector\n"
+                "  --payoffs T,R,P,S           # e.g. 5,3,1,0\n"
+                "  --evolve 0/1\n"
+                "  --generations N\n"
+                "  --population N\n"
+                "  --mutation FLOAT\n"
+                "  --format {text|csv|json}\n"
+                "  --output FILE\n"
+                "  --seed N\n"
+                "  --save FILE                 # save effective config to JSON\n"
+                "  --load FILE                 # load config from JSON (cmd args take precedence)\n"
+                "  --verbose\n"
+                "  --help\n";
+            std::cout.flush();
+            std::exit(0);
+        }
 
-            while (!value.empty() && std::isspace(static_cast<unsigned char>(value.back()))) {
-                value.remove_suffix(1);
+        bool startsWith(std::string_view text, std::string_view prefix) {
+            return text.substr(0, prefix.size()) == prefix;
+        }
+
+        std::string trimCopy(std::string_view view) {
+            while (!view.empty() && std::isspace(static_cast<unsigned char>(view.front()))) {
+                view.remove_prefix(1);
+            }
+            while (!view.empty() && std::isspace(static_cast<unsigned char>(view.back()))) {
+                view.remove_suffix(1);
+            }
+            return std::string(view);
+        }
+
+        template <typename T>
+        T parseNumber(std::string_view text, std::string_view optionName) {
+            std::stringstream stream{ std::string(text) };
+            T value{};
+            stream >> value;
+            if (!stream || !stream.eof()) {
+                exitWithError("error: invalid value for '" + std::string(optionName) + "'.");
             }
             return value;
+        }
+
+        std::vector<std::string> parseStrategies(std::string_view value) {
+            std::stringstream stream{ std::string(value) };
+            std::vector<std::string> names;
+            std::string token;
+            while (std::getline(stream, token, ',')) {
+                auto trimmed = trimCopy(token);
+                if (!trimmed.empty()) {
+                    names.push_back(std::move(trimmed));
+                }
+            }
+            if (names.empty()) {
+                exitWithError("error: '--strategies' requires at least one strategy.");
+            }
+            return names;
+        }
+
+        Payoff parsePayoffs(std::string_view value) {
+            std::array<double, 4> numbers{};
+            std::stringstream stream{ std::string(value) };
+            std::string token;
+            for (std::size_t index = 0; index < numbers.size(); ++index) {
+                if (!std::getline(stream, token, ',')) {
+                    exitWithError("error: '--payoffs' requires four comma-separated values.");
+                }
+                numbers[index] = parseNumber<double>(trimCopy(token), "--payoffs");
+            }
+            if (stream.rdbuf()->in_avail() != 0) {
+                exitWithError("error: '--payoffs' requires exactly four values.");
+            }
+            return Payoff(numbers[0], numbers[1], numbers[2], numbers[3]);
+        }
+
+        OptionalString matchOptionValue(std::string_view argument, std::string_view optionName, int& index, int argc, char** argv) {
+            const std::string prefix = std::string(optionName) + "=";
+            if (argument == optionName) {
+                if (index + 1 >= argc) {
+                    exitWithError("error: missing value for '" + std::string(optionName) + "'.");
+                }
+                ++index;
+                return std::string(argv[index]);
+            }
+            if (startsWith(argument, prefix)) {
+                return std::string(argument.substr(prefix.size()));
+            }
+            return std::nullopt;
+        }
+
+        void applyOverrides(Config& config, const ConfigOverrides& overrides) {
+            if (overrides.rounds) {
+                config.rounds = *overrides.rounds;
+            }
+            if (overrides.repeats) {
+                config.repeats = *overrides.repeats;
+            }
+            if (overrides.epsilon) {
+                config.epsilon = *overrides.epsilon;
+            }
+            if (overrides.seed) {
+                config.seed = *overrides.seed;
+                config.useSeed = true;
+            }
+            if (overrides.payoffs) {
+                config.payoffs = *overrides.payoffs;
+            }
+            if (overrides.strategies) {
+                config.strategyNames = *overrides.strategies;
+            }
+            if (overrides.generations) {
+                config.generations = *overrides.generations;
+            }
+            if (overrides.population) {
+                config.populationSize = *overrides.population;
+            }
+            if (overrides.mutation) {
+                config.mutationRate = *overrides.mutation;
+            }
+            if (overrides.complexityPenalty) {
+                config.complexityPenalty = *overrides.complexityPenalty;
+            }
+            if (overrides.format) {
+                config.outputFormat = *overrides.format;
+            }
+            if (overrides.output) {
+                config.outputFile = *overrides.output;
+            }
+            if (overrides.verbose) {
+                config.verbose = *overrides.verbose;
+            }
+            if (overrides.evolve) {
+                config.evolve = *overrides.evolve;
+            }
+            if (overrides.saveFile) {
+                config.saveFile = *overrides.saveFile;
+            }
+            if (overrides.loadFile) {
+                config.loadFile = *overrides.loadFile;
+            }
+        }
+
+        std::string escapeJson(std::string_view text) {
+            std::string escaped;
+            escaped.reserve(text.size());
+            for (char ch : text) {
+                switch (ch) {
+                case '\\': escaped += "\\\\"; break;
+                case '"': escaped += "\\\""; break;
+                case '\n': escaped += "\\n"; break;
+                case '\r': escaped += "\\r"; break;
+                case '\t': escaped += "\\t"; break;
+                default: escaped.push_back(ch); break;
+                }
+            }
+            return escaped;
+        }
+
+        std::optional<std::string> extractRawValue(const std::string& json, std::string_view key) {
+            const std::string quotedKey = '"' + std::string(key) + '"';
+            const auto keyPos = json.find(quotedKey);
+            if (keyPos == std::string::npos) {
+                return std::nullopt;
+            }
+            const auto colonPos = json.find(':', keyPos + quotedKey.size());
+            if (colonPos == std::string::npos) {
+                return std::nullopt;
+            }
+            const auto valuePos = json.find_first_not_of(" \t\n\r", colonPos + 1);
+            if (valuePos == std::string::npos) {
+                return std::nullopt;
+            }
+            if (json[valuePos] == '"') {
+                auto end = json.find('"', valuePos + 1);
+                while (end != std::string::npos && json[end - 1] == '\\') {
+                    end = json.find('"', end + 1);
+                }
+                if (end == std::string::npos) {
+                    return std::nullopt;
+                }
+                return json.substr(valuePos + 1, end - valuePos - 1);
+            }
+            if (json[valuePos] == '[') {
+                int depth = 1;
+                std::size_t index = valuePos + 1;
+                while (index < json.size() && depth > 0) {
+                    if (json[index] == '[') {
+                        ++depth;
+                    }
+                    else if (json[index] == ']') {
+                        --depth;
+                    }
+                    ++index;
+                }
+                return json.substr(valuePos, index - valuePos);
+            }
+            const auto endPos = json.find_first_of(",}\n\r", valuePos);
+            return json.substr(valuePos, endPos - valuePos);
+        }
+
+        std::optional<int> parseIntField(const std::string& json, std::string_view key) {
+            const auto raw = extractRawValue(json, key);
+            if (!raw) {
+                return std::nullopt;
+            }
+            return parseNumber<int>(trimCopy(*raw), key);
+        }
+
+        std::optional<double> parseDoubleField(const std::string& json, std::string_view key) {
+            const auto raw = extractRawValue(json, key);
+            if (!raw) {
+                return std::nullopt;
+            }
+            return parseNumber<double>(trimCopy(*raw), key);
+        }
+
+        std::optional<bool> parseBoolField(const std::string& json, std::string_view key) {
+            const auto raw = extractRawValue(json, key);
+            if (!raw) {
+                return std::nullopt;
+            }
+            const std::string value = trimCopy(*raw);
+            if (value == "true") {
+                return true;
+            }
+            if (value == "false") {
+                return false;
+            }
+            exitWithError("error: invalid boolean value for '" + std::string(key) + "'.");
+            return std::nullopt;
+        }
+
+        std::optional<std::string> parseStringField(const std::string& json, std::string_view key) {
+            const auto raw = extractRawValue(json, key);
+            if (!raw) {
+                return std::nullopt;
+            }
+            return *raw;
+        }
+
+        std::optional<std::vector<std::string>> parseStrategiesField(const std::string& json, std::string_view key) {
+            const auto raw = extractRawValue(json, key);
+            if (!raw) {
+                return std::nullopt;
+            }
+            if (raw->empty() || raw->front() != '[' || raw->back() != ']') {
+                exitWithError("error: invalid strategies array in JSON config.");
+            }
+            std::vector<std::string> strategies;
+            std::string content = raw->substr(1, raw->size() - 2);
+            std::stringstream stream{ content };
+            std::string token;
+            while (std::getline(stream, token, ',')) {
+                token = trimCopy(token);
+                if (token.size() >= 2 && token.front() == '"' && token.back() == '"') {
+                    strategies.push_back(token.substr(1, token.size() - 2));
+                }
+            }
+            return strategies;
         }
     }
 
     Config Config::fromCommandLine(int argc, char** argv) {
         Config config;
+        ConfigOverrides overrides;
 
-        for (int i = 1; i < argc; ++i) {
-            std::string_view argument(argv[i]);
-            if (startsWith(argument, "--rounds=")) {
-                config.rounds = std::atoi(std::string(argument.substr(9)).c_str());
+        for (int index = 1; index < argc; ++index) {
+            std::string_view argument(argv[index]);
+
+            if (argument == "--help") {
+                printHelpAndExit();
             }
-            else if (startsWith(argument, "--repeats=")) {
-                config.repeats = std::atoi(std::string(argument.substr(10)).c_str());
+            if (argument == "--verbose") {
+                overrides.verbose = true;
+                continue;
             }
-            else if (startsWith(argument, "--noise=")) {
-                config.noise = std::atof(std::string(argument.substr(8)).c_str());
+            if (argument == "--noise" || startsWith(argument, "--noise=")) {
+                exitWithError("error: '--noise' has been removed. Use '--epsilon'.");
             }
-            else if (startsWith(argument, "--seed=")) {
-                config.seed = static_cast<unsigned int>(std::strtoul(std::string(argument.substr(7)).c_str(), nullptr, 10));
-                config.useSeed = true;
+            if (argument == "--payoff" || startsWith(argument, "--payoff=")) {
+                exitWithError("error: '--payoff' has been removed. Use '--payoffs T,R,P,S'.");
             }
-            else if (startsWith(argument, "--strategies=")) {
-                config.strategyNames.clear();
-                std::string names(argument.substr(13));
-                std::size_t begin = 0;
-                while (begin < names.size()) {
-                    std::size_t comma = names.find(',', begin);
-                    std::string token = names.substr(begin, comma == std::string::npos ? std::string::npos : comma - begin);
-                    token = std::string(trim(token));
-                    if (!token.empty()) {
-                        config.strategyNames.push_back(token);
-                    }
-                    if (comma == std::string::npos) {
-                        break;
-                    }
-                    begin = comma + 1;
+
+            if (auto value = matchOptionValue(argument, "--rounds", index, argc, argv)) {
+                overrides.rounds = parseNumber<int>(trimCopy(*value), "--rounds");
+                continue;
+            }
+            if (auto value = matchOptionValue(argument, "--repeats", index, argc, argv)) {
+                overrides.repeats = parseNumber<int>(trimCopy(*value), "--repeats");
+                continue;
+            }
+            if (auto value = matchOptionValue(argument, "--epsilon", index, argc, argv)) {
+                overrides.epsilon = parseNumber<double>(trimCopy(*value), "--epsilon");
+                continue;
+            }
+            if (auto value = matchOptionValue(argument, "--seed", index, argc, argv)) {
+                overrides.seed = static_cast<unsigned int>(parseNumber<unsigned long>(trimCopy(*value), "--seed"));
+                continue;
+            }
+            if (auto value = matchOptionValue(argument, "--strategies", index, argc, argv)) {
+                overrides.strategies = parseStrategies(*value);
+                continue;
+            }
+            if (auto value = matchOptionValue(argument, "--payoffs", index, argc, argv)) {
+                overrides.payoffs = parsePayoffs(*value);
+                continue;
+            }
+            if (auto value = matchOptionValue(argument, "--generations", index, argc, argv)) {
+                overrides.generations = parseNumber<int>(trimCopy(*value), "--generations");
+                continue;
+            }
+            if (auto value = matchOptionValue(argument, "--population", index, argc, argv)) {
+                overrides.population = parseNumber<int>(trimCopy(*value), "--population");
+                continue;
+            }
+            if (auto value = matchOptionValue(argument, "--mutation", index, argc, argv)) {
+                overrides.mutation = parseNumber<double>(trimCopy(*value), "--mutation");
+                continue;
+            }
+            if (auto value = matchOptionValue(argument, "--penalty", index, argc, argv)) {
+                overrides.complexityPenalty = parseNumber<double>(trimCopy(*value), "--penalty");
+                continue;
+            }
+            if (auto value = matchOptionValue(argument, "--format", index, argc, argv)) {
+                std::string format = trimCopy(*value);
+                std::transform(format.begin(), format.end(), format.begin(), [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+                if (format != "text" && format != "csv" && format != "json") {
+                    exitWithError("error: '--format' must be one of text, csv, or json.");
                 }
+                overrides.format = format;
+                continue;
             }
-            else if (startsWith(argument, "--generations=")) {
-                config.generations = std::atoi(std::string(argument.substr(14)).c_str());
+            if (auto value = matchOptionValue(argument, "--output", index, argc, argv)) {
+                overrides.output = trimCopy(*value);
+                continue;
             }
-            else if (startsWith(argument, "--population=")) {
-                config.populationSize = std::atoi(std::string(argument.substr(13)).c_str());
-            }
-            else if (startsWith(argument, "--mutation=")) {
-                config.mutationRate = std::atof(std::string(argument.substr(11)).c_str());
-            }
-            else if (startsWith(argument, "--penalty=")) {
-                config.complexityPenalty = std::atof(std::string(argument.substr(10)).c_str());
-            }
-            else if (startsWith(argument, "--format=")) {
-                config.outputFormat = std::string(trim(argument.substr(9)));
-            }
-            else if (startsWith(argument, "--output=")) {
-                config.outputFile = std::string(trim(argument.substr(9)));
-            }
-            else if (argument == "--verbose") {
-                config.verbose = true;
-            }
-            else if (startsWith(argument, "--payoff=")) {
-                std::string payload(argument.substr(10));
-                double values[4] = { config.payoff.T, config.payoff.R, config.payoff.P, config.payoff.S };
-                std::size_t begin = 0;
-                for (int index = 0; index < 4 && begin < payload.size(); ++index) {
-                    std::size_t comma = payload.find(',', begin);
-                    std::string token = payload.substr(begin, comma == std::string::npos ? std::string::npos : comma - begin);
-                    values[index] = std::atof(token.c_str());
-                    if (comma == std::string::npos) {
-                        begin = payload.size();
-                    }
-                    else {
-                        begin = comma + 1;
-                    }
+            if (auto value = matchOptionValue(argument, "--evolve", index, argc, argv)) {
+                const int evolveFlag = parseNumber<int>(trimCopy(*value), "--evolve");
+                if (evolveFlag != 0 && evolveFlag != 1) {
+                    exitWithError("error: '--evolve' accepts only 0 or 1.");
                 }
-                config.payoff = Payoff(values[0], values[1], values[2], values[3]);
+                overrides.evolve = evolveFlag == 1;
+                continue;
             }
-            else {
-                throw std::runtime_error("Unknown command line argument: " + std::string(argument));
+            if (auto value = matchOptionValue(argument, "--save", index, argc, argv)) {
+                overrides.saveFile = trimCopy(*value);
+                continue;
             }
+            if (auto value = matchOptionValue(argument, "--load", index, argc, argv)) {
+                overrides.loadFile = trimCopy(*value);
+                continue;
+            }
+
+            throw std::runtime_error("Unknown command line argument: " + std::string(argument));
         }
 
+        if (overrides.loadFile && !overrides.loadFile->empty()) {
+            Config::loadFromJson(*overrides.loadFile, config);
+            config.loadFile = *overrides.loadFile;
+        }
+
+        applyOverrides(config, overrides);
         config.ensureDefaults();
         return config;
     }
 
-    void Config::ensureDefaults()
-    {
-        if (rounds <= 0) {
-            rounds = 1;
-        }
-        if (repeats <= 0) {
-            repeats = 1;
-        } 
-        if (noise < 0.0) {
-            noise = 0.0;
-        }
-        else if (noise > 1.0) {
-            noise = 1.0;
-        }
-        if (populationSize < 0) {
-            populationSize = 0;
-        }
-        if (mutationRate < 0.0) {
-            mutationRate = 0.0;
-        }
-        if (mutationRate > 1.0) {
-            mutationRate = 1.0;
-        }
-        if (complexityPenalty < 0.0) {
-            complexityPenalty = 0.0;
+    void Config::ensureDefaults() {
+        rounds = std::max(1, rounds);
+        repeats = std::max(1, repeats);
+        epsilon = std::clamp(epsilon, 0.0, 1.0);
+        populationSize = std::max(0, populationSize);
+        mutationRate = std::clamp(mutationRate, 0.0, 1.0);
+        complexityPenalty = std::max(0.0, complexityPenalty);
+        std::transform(outputFormat.begin(), outputFormat.end(), outputFormat.begin(), [](unsigned char ch) {
+            return static_cast<char>(std::tolower(ch));
+            });
+        if (outputFormat != "text" && outputFormat != "csv" && outputFormat != "json") {
+            outputFormat = "text";
         }
         if (strategyNames.empty()) {
-            strategyNames = { "ALLC", "ALLD", "TFT", "GRIM", "PAVLOV", "RND", "CTFT", "PROBER" };
+            strategyNames = { "ALLC", "ALLD", "TFT", "GRIM", "PAVLOV", "RND", "CTFT", "PROBER", "Empath", "Reflector" };
         }
         if (populationSize == 0 && generations > 0) {
             populationSize = static_cast<int>(strategyNames.size());
+        }
+        evolve = evolve || generations > 0;
+    }
+
+    void Config::saveToJson(const std::string& path) const {
+        if (path.empty()) {
+            return;
+        }
+        std::ofstream stream(path, std::ios::trunc);
+        if (!stream) {
+            throw std::runtime_error("Unable to open file for writing: " + path);
+        }
+
+        const auto joinedStrategies = [&]() {
+            std::ostringstream buffer;
+            for (std::size_t index = 0; index < strategyNames.size(); ++index) {
+                if (index != 0) {
+                    buffer << ", ";
+                }
+                buffer << '"' << escapeJson(strategyNames[index]) << '"';
+            }
+            return buffer.str();
+            }();
+
+        stream << "{\n";
+        stream << "  \"rounds\": " << rounds << ",\n";
+        stream << "  \"repeats\": " << repeats << ",\n";
+        stream << "  \"epsilon\": " << std::fixed << std::setprecision(6) << epsilon << ",\n";
+        stream << "  \"payoffs\": \"" << payoffs.T << ',' << payoffs.R << ',' << payoffs.P << ',' << payoffs.S << "\",\n";
+        stream << "  \"strategies\": [" << joinedStrategies << "],\n";
+        stream << "  \"generations\": " << generations << ",\n";
+        stream << "  \"population\": " << populationSize << ",\n";
+        stream << "  \"mutation\": " << std::fixed << std::setprecision(6) << mutationRate << ",\n";
+        stream << "  \"complexity_penalty\": " << std::fixed << std::setprecision(6) << complexityPenalty << ",\n";
+        stream << "  \"format\": \"" << escapeJson(outputFormat) << "\",\n";
+        stream << "  \"output\": \"" << escapeJson(outputFile) << "\",\n";
+        stream << "  \"seed\": " << seed << ",\n";
+        stream << "  \"use_seed\": " << (useSeed ? "true" : "false") << ",\n";
+        stream << "  \"evolve\": " << (evolve ? "true" : "false") << ",\n";
+        stream << "  \"verbose\": " << (verbose ? "true" : "false") << '\n';
+        stream << "}\n";
+    }
+
+    void Config::loadFromJson(const std::string& path, Config& config) {
+        std::ifstream stream(path);
+        if (!stream) {
+            throw std::runtime_error("Unable to open configuration file: " + path);
+        }
+        std::string json((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
+
+        if (auto value = parseIntField(json, "rounds")) {
+            config.rounds = *value;
+        }
+        if (auto value = parseIntField(json, "repeats")) {
+            config.repeats = *value;
+        }
+        if (auto value = parseDoubleField(json, "epsilon")) {
+            config.epsilon = *value;
+        }
+        if (auto value = parseStringField(json, "payoffs")) {
+            config.payoffs = parsePayoffs(*value);
+        }
+        if (auto value = parseStrategiesField(json, "strategies")) {
+            config.strategyNames = *value;
+        }
+        if (auto value = parseIntField(json, "generations")) {
+            config.generations = *value;
+        }
+        if (auto value = parseIntField(json, "population")) {
+            config.populationSize = *value;
+        }
+        if (auto value = parseDoubleField(json, "mutation")) {
+            config.mutationRate = *value;
+        }
+        if (auto value = parseDoubleField(json, "complexity_penalty")) {
+            config.complexityPenalty = *value;
+        }
+        if (auto value = parseStringField(json, "format")) {
+            config.outputFormat = *value;
+        }
+        if (auto value = parseStringField(json, "output")) {
+            config.outputFile = *value;
+        }
+        if (auto value = parseIntField(json, "seed")) {
+            config.seed = static_cast<unsigned int>(*value);
+            config.useSeed = true;
+        }
+        if (auto value = parseBoolField(json, "use_seed")) {
+            config.useSeed = *value;
+        }
+        if (auto value = parseBoolField(json, "evolve")) {
+            config.evolve = *value;
+        }
+        if (auto value = parseBoolField(json, "verbose")) {
+            config.verbose = *value;
         }
     }
 }
