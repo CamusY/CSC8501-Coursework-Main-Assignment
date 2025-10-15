@@ -1,0 +1,193 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Source Files\core">
+      <UniqueIdentifier>{fa588b69-7bea-4d35-890c-2afb9b35215e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\utils">
+      <UniqueIdentifier>{d6c5cf25-b262-481b-898d-e3bf7c81519d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{ab7428ab-12bf-4dda-b241-bdcc69a05c26}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\core">
+      <UniqueIdentifier>{08a007b9-d231-427b-9866-9c3b65175fcd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\engine">
+      <UniqueIdentifier>{3b371b48-4913-4ea6-8b31-31f7b881aeab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\strategy">
+      <UniqueIdentifier>{ee40e633-201c-43f8-b0e4-e489721d5ffb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\engine">
+      <UniqueIdentifier>{81a47557-b3d1-4f4d-baa0-bc223d23a75d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\strategy">
+      <UniqueIdentifier>{7b43fdde-8842-483a-9929-16598cc9be21}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\utils">
+      <UniqueIdentifier>{360f5a42-7801-4212-881a-7f843d8bd94f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Move.h">
+      <Filter>include\core</Filter>
+    </ClInclude>
+    <ClInclude Include="Payoff.h">
+      <Filter>include\core</Filter>
+    </ClInclude>
+    <ClInclude Include="Result.h">
+      <Filter>include\core</Filter>
+    </ClInclude>
+    <ClInclude Include="MatchState.h">
+      <Filter>include\core</Filter>
+    </ClInclude>
+    <ClInclude Include="Config.h">
+      <Filter>include\core</Filter>
+    </ClInclude>
+    <ClInclude Include="EvolutionManager.h">
+      <Filter>include\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Match.h">
+      <Filter>include\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Reporter.h">
+      <Filter>include\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Statistics.h">
+      <Filter>include\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="TournamentManager.h">
+      <Filter>include\engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Logger.h">
+      <Filter>include\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Random.h">
+      <Filter>include\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Timer.h">
+      <Filter>include\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Strategy.h">
+      <Filter>include\strategy</Filter>
+    </ClInclude>
+    <ClInclude Include="ALLC.h">
+      <Filter>include\strategy</Filter>
+    </ClInclude>
+    <ClInclude Include="ALLD.h">
+      <Filter>include\strategy</Filter>
+    </ClInclude>
+    <ClInclude Include="CTFT.h">
+      <Filter>include\strategy</Filter>
+    </ClInclude>
+    <ClInclude Include="GRIM.h">
+      <Filter>include\strategy</Filter>
+    </ClInclude>
+    <ClInclude Include="PAVLOV.h">
+      <Filter>include\strategy</Filter>
+    </ClInclude>
+    <ClInclude Include="PROBER.h">
+      <Filter>include\strategy</Filter>
+    </ClInclude>
+    <ClInclude Include="RND.h">
+      <Filter>include\strategy</Filter>
+    </ClInclude>
+    <ClInclude Include="StrategyFactory.h">
+      <Filter>include\strategy</Filter>
+    </ClInclude>
+    <ClInclude Include="TFT.h">
+      <Filter>include\strategy</Filter>
+    </ClInclude>
+    <ClInclude Include="Empath.h">
+      <Filter>include\strategy</Filter>
+    </ClInclude>
+    <ClInclude Include="Reflector.h">
+      <Filter>include\strategy</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Move.cpp">
+      <Filter>Source Files\core</Filter>
+    </ClCompile>
+    <ClCompile Include="Payoff.cpp">
+      <Filter>Source Files\core</Filter>
+    </ClCompile>
+    <ClCompile Include="Result.cpp">
+      <Filter>Source Files\core</Filter>
+    </ClCompile>
+    <ClCompile Include="Config.cpp">
+      <Filter>Source Files\core</Filter>
+    </ClCompile>
+    <ClCompile Include="MatchState.cpp">
+      <Filter>Source Files\core</Filter>
+    </ClCompile>
+    <ClCompile Include="EvolutionManager.cpp">
+      <Filter>Source Files\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Match.cpp">
+      <Filter>Source Files\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Reporter.cpp">
+      <Filter>Source Files\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Statistics.cpp">
+      <Filter>Source Files\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="TournamentManager.cpp">
+      <Filter>Source Files\engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Logger.cpp">
+      <Filter>Source Files\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Random.cpp">
+      <Filter>Source Files\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Timer.cpp">
+      <Filter>Source Files\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Strategy.cpp">
+      <Filter>Source Files\strategy</Filter>
+    </ClCompile>
+    <ClCompile Include="ALLC.cpp">
+      <Filter>Source Files\strategy</Filter>
+    </ClCompile>
+    <ClCompile Include="ALLD.cpp">
+      <Filter>Source Files\strategy</Filter>
+    </ClCompile>
+    <ClCompile Include="CTFT.cpp">
+      <Filter>Source Files\strategy</Filter>
+    </ClCompile>
+    <ClCompile Include="GRIM.cpp">
+      <Filter>Source Files\strategy</Filter>
+    </ClCompile>
+    <ClCompile Include="PAVLOV.cpp">
+      <Filter>Source Files\strategy</Filter>
+    </ClCompile>
+    <ClCompile Include="PROBER.cpp">
+      <Filter>Source Files\strategy</Filter>
+    </ClCompile>
+    <ClCompile Include="RND.cpp">
+      <Filter>Source Files\strategy</Filter>
+    </ClCompile>
+    <ClCompile Include="StrategyFactory.cpp">
+      <Filter>Source Files\strategy</Filter>
+    </ClCompile>
+    <ClCompile Include="TFT.cpp">
+      <Filter>Source Files\strategy</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Reflector.cpp">
+      <Filter>Source Files\strategy</Filter>
+    </ClCompile>
+    <ClCompile Include="Empath.cpp">
+      <Filter>Source Files\strategy</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
