@@ -1,0 +1,19 @@
+Usage: ipd [options]
+  --rounds N
+  --repeats N
+  --epsilon FLOAT             # noise probability per move (0..1)
+  --strategies LIST           # e.g. ALLC,ALLD,TFT,GRIM,PAVLOV,RND(0.3),CTFT,PROBER,Empath,Reflector
+  --payoffs T,R,P,S           # e.g. 5,3,1,0
+  --evolve 0/1
+  --generations N
+  --population N
+  --mutation FLOAT
+  --format {text|csv|json}   # output format only
+  --output FILE              # output destination only (defaults to stdout)
+  --seed N
+  --save FILE                 # save effective config to JSON (includes scb)
+  --load FILE                 # load config from JSON (command line overrides loaded values)
+  --scb [MAP]                # enable SCB; no MAP uses default complexity; MAP overrides provided entries.
+                             #   e.g. --scb ALLC=1,ALLD=1,TFT=2,GRIM=2,PAVLOV=2,CTFT=3,PROBER=3,Empath=3,Reflector=3
+  --verbose
+  --help
