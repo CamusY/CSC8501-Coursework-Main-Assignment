@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <optional>
 #include <string>
 
 namespace ipd {
@@ -11,11 +12,13 @@ namespace ipd {
         double stdev = 0.0;
         double ciLow = 0.0;
         double ciHigh = 0.0;
-		double coopRate = 0.0;
-        double firstDefection = 0.0;
+        double coopRate = 0.0;
+        std::optional<double> firstDefection;
         double echoLength = 0.0;
         double complexity = 0.0;
         std::size_t samples = 0;
+        double cost = 0.0;
+        double netMean = 0.0;
         double extra = 0.0; // generic field used by evolution frequency etc.
 
         std::string toString() const;

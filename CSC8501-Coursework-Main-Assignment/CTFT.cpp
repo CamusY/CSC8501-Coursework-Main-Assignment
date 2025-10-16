@@ -38,7 +38,7 @@ namespace ipd {
         m_contrite = false;
     }
 
-    double CTFT::complexity() const {
-        return 3.0;
+    int CTFT::complexity() const {
+        return 3;
     }
 }

@@ -26,7 +26,7 @@ namespace ipd {
         return rng.nextBool(m_probability) ? Move::Cooperate : Move::Defect;
     }
 
-    double RND::complexity() const {
-        return 1.5;
+    int RND::complexity() const {
+        return 2;
     }
 }

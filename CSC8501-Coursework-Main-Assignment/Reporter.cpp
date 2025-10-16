@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <cmath>
 #include <functional>
 #include <iomanip>
 #include <iostream>
@@ -42,14 +43,84 @@ namespace ipd {
             return stream.str();
         }
 
-        ColumnList resultColumns() {
-            return {
+        std::string formatFirstDefectionCell(const Result& r) {
+            if (!r.firstDefection) {
+                return "NA";
+            }
+            std::ostringstream s;
+            s << std::fixed << std::setprecision(3) << *r.firstDefection;
+            return s.str();
+        }
+
+        std::string formatCostValue(double cost) {
+            std::ostringstream s;
+            s << static_cast<int>(std::llround(cost));
+            return s.str();
+        }
+
+        std::vector<std::pair<std::string, double>> collectCostEntries(const std::vector<Result>& results) {
+            std::vector<std::pair<std::string, double>> entries;
+            entries.reserve(results.size());
+            for (const auto& r : results) {
+                entries.emplace_back(r.strategy, r.cost);
+            }
+            std::sort(entries.begin(), entries.end(), [](const auto& lhs, const auto& rhs) {
+                return lhs.first < rhs.first;
+                });
+            return entries;
+        }
+
+        std::string formatCostMapping(const std::vector<Result>& results) {
+            const auto entries = collectCostEntries(results);
+            std::ostringstream stream;
+            bool first = true;
+            for (const auto& [name, cost] : entries) {
+                if (!first) {
+                    stream << ", ";
+                }
+                first = false;
+                stream << name << '=' << static_cast<int>(std::llround(cost));
+            }
+            return stream.str();
+        }
+
+        std::string escapeJson(std::string_view text);
+
+        std::string jsonCostObject(const std::vector<Result>& results) {
+            const auto entries = collectCostEntries(results);
+            std::ostringstream stream;
+            stream << '{';
+            for (std::size_t index = 0; index < entries.size(); ++index) {
+                const auto& [name, cost] = entries[index];
+                if (index != 0) {
+                    stream << ',';
+                }
+                stream << "\"" << escapeJson(name) << "\": " << static_cast<int>(std::llround(cost));
+            }
+            stream << '}';
+            return stream.str();
+        }
+
+        ColumnList resultColumns(const Config& config) {
+            ColumnList columns{
                 { "Strategy", 18, true, [](const Result& r) { return r.strategy; } },
-                { "Mean", 12, false, [](const Result& r) {
+                { config.scbEnabled ? "RawMean" : "Mean", 12, false, [](const Result& r) {
                     std::ostringstream s;
                     s << std::fixed << std::setprecision(3) << r.mean;
                     return s.str();
-                } },
+                } }
+            };
+            if (config.scbEnabled) {
+                columns.push_back({ "NetMean", 12, false, [](const Result& r) {
+                    std::ostringstream s;
+                    s << std::fixed << std::setprecision(3) << r.netMean;
+                    return s.str();
+                } });
+                columns.push_back({ "Cost", 8, false, [](const Result& r) {
+                    return formatCostValue(r.cost);
+                } });
+            }
+            const ColumnList tail{
                 { "StdDev", 12, false, [](const Result& r) {
                     std::ostringstream s;
                     s << std::fixed << std::setprecision(3) << r.stdev;
@@ -71,9 +142,7 @@ namespace ipd {
                     return s.str();
                 } },
                 { "FirstDef", 12, false, [](const Result& r) {
-                    std::ostringstream s;
-                    s << std::fixed << std::setprecision(3) << r.firstDefection;
-                    return s.str();
+                    return formatFirstDefectionCell(r);
                 } },
                 { "EchoLen", 12, false, [](const Result& r) {
                     std::ostringstream s;
@@ -97,8 +166,9 @@ namespace ipd {
                     return s.str();
                 } }
             };
+            columns.insert(columns.end(), tail.begin(), tail.end());
+            return columns;
         }
-
         int tableWidth(const ColumnList& columns) {
             return std::accumulate(columns.begin(), columns.end(), 1, [](int total, const Column& column) {
                 return total + column.width + 3;
@@ -153,8 +223,16 @@ namespace ipd {
                 buffer << ", Generations=" << config.generations;
             }
             buffer << '\n';
+            buffer << "SCB=" << (config.scbEnabled ? "enabled" : "disabled");
+            if (config.scbEnabled) {
+                const std::string mapping = formatCostMapping(results);
+                if (!mapping.empty()) {
+                    buffer << ", Costs=" << mapping;
+                }
+            }
+            buffer << '\n';
 
-            const auto columns = resultColumns();
+            const auto columns = resultColumns(config);
             const int width = tableWidth(columns);
             appendSeparator(buffer, width);
             appendHeader(buffer, columns);
@@ -192,18 +270,30 @@ namespace ipd {
         void writeCsvReport(const Config& config, const std::vector<Result>& results) {
             std::ofstream file;
             std::ostream& stream = prepareStream(config, file);
-            stream << "strategy,mean,stdev,ci95_low,ci95_high,coop_rate,first_defection,echo_length,repeats,seed,epsilon,payoffs,complexity,samples,share\n";
+            stream << "strategy,mean";
+            if (config.scbEnabled) {
+                stream << ",net_mean,cost";
+            }
+            stream << ",stdev,ci95_low,ci95_high,coop_rate,first_defection,echo_length,repeats,seed,epsilon,payoffs,complexity,samples,share\n";
             const std::string payoffs = std::to_string(config.payoffs.T) + ',' + std::to_string(config.payoffs.R) + ',' +
                 std::to_string(config.payoffs.P) + ',' + std::to_string(config.payoffs.S);
             for (const auto& result : results) {
                 stream << '"' << result.strategy << '"' << ','
-                    << std::fixed << std::setprecision(6) << result.mean << ','
-                    << result.stdev << ','
+                    << std::fixed << std::setprecision(6) << result.mean;
+                if (config.scbEnabled) {
+                    stream << ',' << result.netMean << ',' << result.cost;
+                }
+                stream << ',' << result.stdev << ','
                     << result.ciLow << ','
                     << result.ciHigh << ','
-                    << result.coopRate << ','
-                    << result.firstDefection << ','
-                    << result.echoLength << ','
+                    << result.coopRate << ',';
+                if (result.firstDefection) {
+                    stream << *result.firstDefection;
+                }
+                else {
+                    stream << "NA";
+                }
+                stream << ',' << result.echoLength << ','
                     << config.repeats << ','
                     << (config.useSeed ? std::to_string(config.seed) : std::string()) << ','
                     << config.epsilon << ','
@@ -253,7 +343,14 @@ namespace ipd {
             stream << "    \"epsilon\": " << config.epsilon << ",\n";
             stream << "    \"payoffs\": [" << config.payoffs.T << ',' << config.payoffs.R << ',' << config.payoffs.P << ',' << config.payoffs.S << "],\n";
             stream << "    \"seed\": " << (config.useSeed ? std::to_string(config.seed) : "null") << ",\n";
-            stream << "    \"strategies\": " << strategyArray(config.strategyNames) << '\n';
+            stream << "    \"strategies\": " << strategyArray(config.strategyNames) << ",\n";
+            stream << "    \"scb_enabled\": " << (config.scbEnabled ? "true" : "false");
+            if (config.scbEnabled) {
+                stream << ",\n    \"scb_costs\": " << jsonCostObject(results) << '\n';
+            }
+            else {
+                stream << '\n';
+            }
             stream << "  },\n";
             stream << "  \"results\": [\n";
             for (std::size_t index = 0; index < results.size(); ++index) {
@@ -261,12 +358,23 @@ namespace ipd {
                 stream << "    {\n";
                 stream << "      \"strategy\": \"" << escapeJson(result.strategy) << "\",\n";
                 stream << "      \"mean\": " << result.mean << ",\n";
+                if (config.scbEnabled) {
+                    stream << "      \"net_mean\": " << result.netMean << ",\n";
+                    stream << "      \"cost\": " << result.cost << ",\n";
+                }
                 stream << "      \"stdev\": " << result.stdev << ",\n";
                 stream << "      \"ci95_low\": " << result.ciLow << ",\n";
                 stream << "      \"ci95_high\": " << result.ciHigh << ",\n";
-				stream << "      \"coop_rate\": " << result.coopRate << ",\n";
-				stream << "      \"first_defection\": " << result.firstDefection << ",\n";
-				stream << "      \"echo_length\": " << result.echoLength << ",\n";
+                stream << "      \"coop_rate\": " << result.coopRate << ",\n";
+                stream << "      \"first_defection\": ";
+                if (result.firstDefection) {
+                    stream << *result.firstDefection;
+                }
+                else {
+                    stream << "null";
+                }
+                stream << ",\n";
+                stream << "      \"echo_length\": " << result.echoLength << ",\n";
                 stream << "      \"complexity\": " << result.complexity << ",\n";
                 stream << "      \"samples\": " << result.samples << ",\n";
                 stream << "      \"share\": " << result.extra << ",\n";

@@ -16,7 +16,7 @@ namespace ipd {
         virtual Move nextMove(const MatchState& state, int selfIndex, Random& rng) = 0;
         virtual void onMatchEnd(const MatchState& state, int selfIndex) { (void)state; (void)selfIndex; }
         virtual void reset() {}
-        virtual double complexity() const { return 1.0; }
+        virtual int complexity() const { return 1; }
     };
 
     using StrategyPtr = std::unique_ptr<Strategy>;

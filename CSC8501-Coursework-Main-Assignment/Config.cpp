@@ -16,6 +16,7 @@
 #include <tuple>
 #include <vector>
 #include <stdexcept>
+#include <unordered_map>
 
 namespace ipd {
     namespace {
@@ -38,6 +39,8 @@ namespace ipd {
             std::optional<bool> evolve;
             OptionalString saveFile;
             OptionalString loadFile;
+            std::optional<bool> scbEnabled;
+            std::optional<std::unordered_map<std::string, int>> scbCosts;
         };
 
         void exitWithError(const std::string& message) {
@@ -57,11 +60,13 @@ namespace ipd {
                 "  --generations N\n"
                 "  --population N\n"
                 "  --mutation FLOAT\n"
-                "  --format {text|csv|json}\n"
-                "  --output FILE\n"
+                "  --format {text|csv|json}   # output format only\n"
+                "  --output FILE              # output destination only (defaults to stdout)\n"
                 "  --seed N\n"
-                "  --save FILE                 # save effective config to JSON\n"
-                "  --load FILE                 # load config from JSON (cmd args take precedence)\n"
+                "  --save FILE                 # save effective config to JSON (includes scb)\n"
+                "  --load FILE                 # load config from JSON (command line overrides loaded values)\n"
+                "  --scb [MAP]                # enable SCB; no MAP uses default complexity; MAP overrides provided entries.\n"
+                "                             #   e.g. --scb ALLC=1,ALLD=1,TFT=2,GRIM=2,PAVLOV=2,CTFT=3,PROBER=3,Empath=3,Reflector=3\n"
                 "  --verbose\n"
                 "  --help\n";
             std::cout.flush();
@@ -123,6 +128,30 @@ namespace ipd {
                 exitWithError("error: '--payoffs' requires exactly four values.");
             }
             return Payoff(numbers[0], numbers[1], numbers[2], numbers[3]);
+        }
+
+        std::unordered_map<std::string, int> parseScbMap(std::string_view value) {
+            std::unordered_map<std::string, int> costs;
+            std::stringstream stream{ std::string(value) };
+            std::string token;
+            while (std::getline(stream, token, ',')) {
+                const std::string entry = trimCopy(token);
+                if (entry.empty()) {
+                    continue;
+                }
+                const auto equalPos = entry.find('=');
+                if (equalPos == std::string::npos) {
+                    exitWithError("error: '--scb' mapping entries must use Strategy=Cost.");
+                }
+                std::string key = trimCopy(entry.substr(0, equalPos));
+                std::string valueText = trimCopy(entry.substr(equalPos + 1));
+                if (key.empty() || valueText.empty()) {
+                    exitWithError("error: '--scb' mapping entries require non-empty key and value.");
+                }
+                const int cost = parseNumber<int>(valueText, "--scb");
+                costs[key] = cost;
+            }
+            return costs;
         }
 
         OptionalString matchOptionValue(std::string_view argument, std::string_view optionName, int& index, int argc, char** argv) {
@@ -190,6 +219,12 @@ namespace ipd {
             if (overrides.loadFile) {
                 config.loadFile = *overrides.loadFile;
             }
+            if (overrides.scbEnabled) {
+                config.scbEnabled = *overrides.scbEnabled;
+            }
+            if (overrides.scbCosts) {
+                config.scbCosts = *overrides.scbCosts;
+            }
         }
 
         std::string escapeJson(std::string_view text) {
@@ -232,15 +267,31 @@ namespace ipd {
                 }
                 return json.substr(valuePos + 1, end - valuePos - 1);
             }
-            if (json[valuePos] == '[') {
+            if (json[valuePos] == '[' || json[valuePos] == '{') {
+                const char open = json[valuePos];
+                const char close = (open == '[') ? ']' : '}';
                 int depth = 1;
                 std::size_t index = valuePos + 1;
+                bool inString = false;
+                bool escape = false;
                 while (index < json.size() && depth > 0) {
-                    if (json[index] == '[') {
-                        ++depth;
+                    const char current = json[index];
+                    if (inString) {
+                        if (current == '"' && !escape) {
+                            inString = false;
+                        }
+                        escape = (!escape && current == '\\');
                     }
-                    else if (json[index] == ']') {
-                        --depth;
+                    else {
+                        if (current == '"') {
+                            inString = true;
+                        }
+                        else if (current == open) {
+                            ++depth;
+                        }
+                        else if (current == close) {
+                            --depth;
+                        }
                     }
                     ++index;
                 }
@@ -312,6 +363,45 @@ namespace ipd {
         }
     }
 
+    std::optional<std::unordered_map<std::string, int>> parseIntMapField(const std::string& json, std::string_view key) {
+        const auto raw = extractRawValue(json, key);
+        if (!raw) {
+            return std::nullopt;
+        }
+        const std::string trimmed = trimCopy(*raw);
+        if (trimmed.empty()) {
+            return std::unordered_map<std::string, int>{};
+        }
+        if (trimmed.front() != '{' || trimmed.back() != '}') {
+            exitWithError("error: invalid object for '" + std::string(key) + "'.");
+        }
+        std::unordered_map<std::string, int> costs;
+        std::string content = trimmed.substr(1, trimmed.size() - 2);
+        std::stringstream stream{ content };
+        std::string token;
+        while (std::getline(stream, token, ',')) {
+            std::string entry = trimCopy(token);
+            if (entry.empty()) {
+                continue;
+            }
+            const auto colon = entry.find(':');
+            if (colon == std::string::npos) {
+                exitWithError("error: invalid entry in '" + std::string(key) + "'.");
+            }
+            std::string keyPart = trimCopy(entry.substr(0, colon));
+            std::string valuePart = trimCopy(entry.substr(colon + 1));
+            if (!keyPart.empty() && keyPart.front() == '"' && keyPart.back() == '"') {
+                keyPart = keyPart.substr(1, keyPart.size() - 2);
+            }
+            if (keyPart.empty() || valuePart.empty()) {
+                exitWithError("error: invalid entry in '" + std::string(key) + "'.");
+            }
+            const int cost = parseNumber<int>(valuePart, key);
+            costs[keyPart] = cost;
+        }
+        return costs;
+    }
+ 
     Config Config::fromCommandLine(int argc, char** argv) {
         Config config;
         ConfigOverrides overrides;
@@ -331,6 +421,31 @@ namespace ipd {
             }
             if (argument == "--payoff" || startsWith(argument, "--payoff=")) {
                 exitWithError("error: '--payoff' has been removed. Use '--payoffs T,R,P,S'.");
+            }
+
+            if (startsWith(argument, "--scb=")) {
+                overrides.scbEnabled = true;
+                const std::string mapValue = trimCopy(argument.substr(6));
+                if (mapValue.empty()) {
+                    overrides.scbCosts = std::unordered_map<std::string, int>{};
+                }
+                else {
+                    overrides.scbCosts = parseScbMap(mapValue);
+                }
+                continue;
+            }
+            if (argument == "--scb") {
+                overrides.scbEnabled = true;
+                std::unordered_map<std::string, int> costs;
+                if (index + 1 < argc) {
+                    std::string_view nextArgument(argv[index + 1]);
+                    if (!nextArgument.empty() && nextArgument.front() != '-') {
+                        ++index;
+                        costs = parseScbMap(trimCopy(nextArgument));
+                    }
+                }
+                overrides.scbCosts = std::move(costs);
+                continue;
             }
 
             if (auto value = matchOptionValue(argument, "--rounds", index, argc, argv)) {
@@ -458,6 +573,21 @@ namespace ipd {
             return buffer.str();
             }();
 
+        const auto formattedScb = [&]() {
+            std::ostringstream buffer;
+            buffer << '{';
+            bool first = true;
+            for (const auto& [name, cost] : scbCosts) {
+                if (!first) {
+                    buffer << ", ";
+                }
+                first = false;
+                buffer << '"' << escapeJson(name) << "\": " << cost;
+            }
+            buffer << '}';
+            return buffer.str();
+            }();
+
         stream << "{\n";
         stream << "  \"rounds\": " << rounds << ",\n";
         stream << "  \"repeats\": " << repeats << ",\n";
@@ -468,6 +598,8 @@ namespace ipd {
         stream << "  \"population\": " << populationSize << ",\n";
         stream << "  \"mutation\": " << std::fixed << std::setprecision(6) << mutationRate << ",\n";
         stream << "  \"complexity_penalty\": " << std::fixed << std::setprecision(6) << complexityPenalty << ",\n";
+        stream << "  \"scb_enabled\": " << (scbEnabled ? "true" : "false") << ",\n";
+        stream << "  \"scb_costs\": " << formattedScb << ",\n";
         stream << "  \"format\": \"" << escapeJson(outputFormat) << "\",\n";
         stream << "  \"output\": \"" << escapeJson(outputFile) << "\",\n";
         stream << "  \"seed\": " << seed << ",\n";
@@ -529,6 +661,12 @@ namespace ipd {
         }
         if (auto value = parseBoolField(json, "verbose")) {
             config.verbose = *value;
+        }
+        if (auto value = parseBoolField(json, "scb_enabled")) {
+            config.scbEnabled = *value;
+        }
+        if (auto value = parseIntMapField(json, "scb_costs")) {
+            config.scbCosts = *value;
         }
     }
 }

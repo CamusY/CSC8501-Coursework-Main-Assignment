@@ -12,7 +12,7 @@ namespace ipd {
         return state.lastOpponentMove(selfIndex);
     }
 
-    double TFT::complexity() const {
-        return 2.0;
+    int TFT::complexity() const {
+        return 2;
     }
 }

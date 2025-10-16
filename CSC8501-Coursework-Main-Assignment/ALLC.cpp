@@ -8,7 +8,7 @@ namespace ipd {
         return Move::Cooperate;
     }
 
-    double ALLC::complexity() const {
-        return 1.0;
+    int ALLC::complexity() const {
+        return 1;
     }
 }

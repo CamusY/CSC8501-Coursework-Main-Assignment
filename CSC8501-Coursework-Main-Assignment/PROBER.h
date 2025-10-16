@@ -10,7 +10,7 @@ namespace ipd {
         std::string name() const override;
         Move nextMove(const MatchState& state, int selfIndex, Random& rng) override;
         void reset() override;
-        double complexity() const override;
+        int complexity() const override;
 
     private:
         int m_round;

@@ -3,6 +3,7 @@
 #include <optional>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 #include "Payoff.h"
 
@@ -25,6 +26,8 @@ namespace ipd {
 		bool evolve = false;
         std::string saveFile;
 		std::string loadFile;
+        bool scbEnabled = false;
+        std::unordered_map<std::string, int> scbCosts;
 
         static Config fromCommandLine(int argc, char** argv);
         void ensureDefaults();

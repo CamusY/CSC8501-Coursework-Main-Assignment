@@ -10,9 +10,17 @@ namespace ipd {
         stream << ", stdev=" << std::fixed << std::setprecision(3) << stdev;
         stream << ", CI95=[" << std::fixed << std::setprecision(3) << ciLow << ", " << ciHigh << "]";
         stream << ", coopRate=" << std::fixed << std::setprecision(3) << coopRate;
-        stream << ", firstDefection=" << std::fixed << std::setprecision(3) << firstDefection;
+        stream << ", firstDefection=";
+        if (firstDefection) {
+            stream << std::fixed << std::setprecision(3) << *firstDefection;
+        }
+        else {
+            stream << "NA";
+        }
         stream << ", echoLength=" << std::fixed << std::setprecision(3) << echoLength;
         stream << ", complexity=" << std::fixed << std::setprecision(3) << complexity;
+        stream << ", cost=" << std::fixed << std::setprecision(3) << cost;
+        stream << ", netMean=" << std::fixed << std::setprecision(3) << netMean;
         if (samples > 0) {
             stream << ", samples=" << samples;
         }
@@ -25,8 +33,12 @@ namespace ipd {
     std::string Result::toCsv() const {
         std::ostringstream stream;
         stream << '"' << strategy << '"';
-        stream << ',' << mean << ',' << stdev << ',' << ciLow << ',' << ciHigh << ','
-            << coopRate << ',' << firstDefection << ',' << echoLength << ','
+        stream << ',' << mean << ',' << netMean << ',' << cost << ',' << stdev << ',' << ciLow << ',' << ciHigh << ','
+            << coopRate << ',';
+        if (firstDefection) {
+            stream << *firstDefection;
+        }
+        stream << ',' << echoLength << ','
             << complexity << ',' << samples << ',' << extra;
         return stream.str();
     }

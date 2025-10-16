@@ -72,7 +72,7 @@ namespace ipd {
         }
 
         inline double penalisedFitness(const Result& r, double penalty) {
-            return r.mean - penalty * r.complexity;
+            return r.netMean - penalty * r.complexity;
         }
 
         std::vector<double> collectFitness(const std::vector<std::string>& names,
@@ -285,34 +285,6 @@ namespace ipd {
                 for (int k = 0; k < give; ++k) counts[remainders[k].first] += 1;
             }
         }
-
-        void writeEvolutionSharesCsv(const Config& config, const std::vector<GenerationShare>& history) {
-            if (history.empty()) return;
-
-            namespace fs = std::filesystem;
-            fs::path out = config.outputFile.empty() ? fs::path("evolution_shares.csv")
-                : fs::path(config.outputFile).parent_path() / "evolution_shares.csv";
-            if (!out.parent_path().empty() && !fs::exists(out.parent_path())) {
-                fs::create_directories(out.parent_path());
-            }
-
-            std::ofstream os(out, std::ios::trunc);
-            if (!os) throw std::runtime_error("Unable to write evolution share log: " + out.string());
-
-            os << "generation,strategy,count,share\n";
-            for (const auto& g : history) {
-                std::map<std::string, int> countLookup;
-                for (const auto& kv : g.counts) countLookup[kv.first] = kv.second;
-                for (const auto& kv : g.shares) {
-                    const std::string& name = kv.first;
-                    const double share = kv.second;
-                    const int cnt = countLookup[name];
-                    os << g.generation << ',' << name << ',' << cnt << ','
-                        << std::fixed << std::setprecision(6) << share << '\n';
-                }
-            }
-        }
-
     } 
 
     EvolutionOutcome EvolutionManager::run(const Config& config) const {
@@ -358,6 +330,33 @@ namespace ipd {
 
         out.results = std::move(lastFitness);
         return out;
+    }
+
+    void writeEvolutionSharesCsv(const Config& config, const std::vector<GenerationShare>& history) {
+        if (history.empty()) return;
+
+        namespace fs = std::filesystem;
+        fs::path out = config.outputFile.empty() ? fs::path("evolution_shares.csv")
+            : fs::path(config.outputFile).parent_path() / "evolution_shares.csv";
+        if (!out.parent_path().empty() && !fs::exists(out.parent_path())) {
+            fs::create_directories(out.parent_path());
+        }
+
+        std::ofstream os(out, std::ios::trunc);
+        if (!os) throw std::runtime_error("Unable to write evolution share log: " + out.string());
+
+        os << "generation,strategy,count,share\n";
+        for (const auto& g : history) {
+            std::map<std::string, int> countLookup;
+            for (const auto& kv : g.counts) countLookup[kv.first] = kv.second;
+            for (const auto& kv : g.shares) {
+                const std::string& name = kv.first;
+                const double share = kv.second;
+                const int cnt = countLookup[name];
+                os << g.generation << ',' << name << ',' << cnt << ','
+                    << std::fixed << std::setprecision(6) << share << '\n';
+            }
+        }
     }
 
 } 

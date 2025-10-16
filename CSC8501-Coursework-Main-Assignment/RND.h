@@ -8,7 +8,7 @@ namespace ipd {
         explicit RND(double probability = 0.5);
         std::string name() const override;
         Move nextMove(const MatchState& state, int selfIndex, Random& rng) override;
-        double complexity() const override;
+        int complexity() const override;
 
     private:
         double m_probability;

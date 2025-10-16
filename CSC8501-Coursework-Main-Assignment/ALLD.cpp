@@ -8,7 +8,7 @@ namespace ipd {
         return Move::Defect;
     }
 
-    double ALLD::complexity() const {
-        return 1.0;
+    int ALLD::complexity() const {
+        return 1;
     }
 }

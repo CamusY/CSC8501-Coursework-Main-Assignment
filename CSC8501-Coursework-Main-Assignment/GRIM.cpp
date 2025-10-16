@@ -23,7 +23,7 @@ namespace ipd {
         m_triggered = false;
     }
 
-    double GRIM::complexity() const {
-        return 2.0;
+    int GRIM::complexity() const {
+        return 2;
     }
 }

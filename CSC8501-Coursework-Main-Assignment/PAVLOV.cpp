@@ -23,7 +23,7 @@ namespace ipd {
         m_lastMove = Move::Cooperate;
     }
 
-    double PAVLOV::complexity() const {
-        return 2.0;
+    int PAVLOV::complexity() const {
+        return 2;
     }
 }

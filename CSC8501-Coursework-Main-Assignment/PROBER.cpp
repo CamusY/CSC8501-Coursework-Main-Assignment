@@ -46,7 +46,7 @@ namespace ipd {
         m_exploit = false;
     }
 
-    double PROBER::complexity() const {
-        return 3.0;
+    int PROBER::complexity() const {
+        return 3;
     }
 }
