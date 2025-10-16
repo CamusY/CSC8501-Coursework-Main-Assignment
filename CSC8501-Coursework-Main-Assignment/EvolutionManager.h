@@ -6,8 +6,10 @@
 
 #include "Config.h"
 #include "Result.h"
+#include "Random.h"
 
 namespace ipd {
+
     struct GenerationShare {
         int generation = 0;
         std::vector<std::pair<std::string, double>> shares;
@@ -21,9 +23,21 @@ namespace ipd {
 
     class EvolutionManager {
     public:
-        EvolutionManager() = default;
+        EvolutionManager();
 
-        EvolutionOutcome run(const Config& config) const;
+        EvolutionOutcome run(const Config& config);
+
+    private:
+        Random m_random; 
+
+        std::vector<int> sampleNextGeneration(
+            const std::vector<double>& probabilities,
+            int population);
+
+        void mutateCounts(
+            std::vector<int>& counts,
+            double mutationRate,
+            const std::vector<double>& probabilities);
     };
 
     void writeEvolutionSharesCsv(const Config& config, const std::vector<GenerationShare>& history);

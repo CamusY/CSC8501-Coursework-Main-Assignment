@@ -1,15 +1,13 @@
-#include "EvolutionManager.h"
+ï»¿#include "EvolutionManager.h"
 
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
-#include <limits>
 #include <map>
 #include <numeric>
 #include <stdexcept>
-#include <utility>
 #include <vector>
 
 #include "TournamentManager.h"
@@ -17,44 +15,45 @@
 
 /**
  * @file EvolutionManager.cpp
- * @brief ÊµÏÖÁËµü´úÇôÍ½À§¾³£¨IPD£©²ßÂÔµÄÑİ»¯Ä£Äâ¹¦ÄÜ¡£
+ * @brief å®ç°äº†è¿­ä»£å›šå¾’å›°å¢ƒï¼ˆIPDï¼‰ç­–ç•¥çš„æ¼”åŒ–æ¨¡æ‹ŸåŠŸèƒ½ã€‚
  *
- * ¸ÃÎÄ¼ş°üº¬ÁËÔËĞĞÒ»¸öÊÀ´úÄ£ÄâµÄºËĞÄÂß¼­£¬ÆäÖĞ²ßÂÔµÄÖÖÈº¸ù¾İÆäÔÚ½õ±êÈüÖĞµÄ±íÏÖ½øĞĞÑİ»¯¡£
- * Õû¸ö¹ı³Ì°üÀ¨ÊÊÓ¦¶ÈÆÀ¹À¡¢Ñ¡Ôñ¡¢·±Ö³ºÍ±äÒì¡£
+ * è¯¥æ–‡ä»¶åŒ…å«äº†è¿è¡Œä¸€ä¸ªä¸–ä»£æ¨¡æ‹Ÿçš„æ ¸å¿ƒé€»è¾‘ï¼Œå…¶ä¸­ç­–ç•¥çš„ç§ç¾¤æ ¹æ®å…¶åœ¨é”¦æ ‡èµ›ä¸­çš„è¡¨ç°è¿›è¡Œæ¼”åŒ–ã€‚
+ * æ•´ä¸ªè¿‡ç¨‹åŒ…æ‹¬é€‚åº”åº¦è¯„ä¼°ã€é€‰æ‹©ã€ç¹æ®–å’Œå˜å¼‚ã€‚
  *
- * --- ºËĞÄ×é¼ş¸ÅÊö ---
+ * --- æ ¸å¿ƒç»„ä»¶æ¦‚è¿° ---
  *
- * I. ²ÎÊıÓë³£Á¿
- * - kEpsilon: Ò»¸öÎ¢Ğ¡³£Á¿£¬ÓÃÓÚ·ÀÖ¹¼ÆËãÖĞ³öÏÖ³ıÒÔÁã»ò¸ºÈ¨ÖØµÄÎÊÌâ¡£
- * - makeEvaluationConfig: ´´½¨Ò»¸ö×¨ÃÅÓÃÓÚÆÀ¹Àµ¥¸öÊÀ´úÊÕÒæµÄÅäÖÃ£¬¸ÃÅäÖÃ²»Ö´ĞĞÈÎºÎÑİ»¯²½Öè¡£
+ * I. å‚æ•°ä¸å¸¸é‡
+ * - kEpsilon: ä¸€ä¸ªå¾®å°å¸¸é‡ï¼Œç”¨äºé˜²æ­¢è®¡ç®—ä¸­å‡ºç°é™¤ä»¥é›¶æˆ–è´Ÿæƒé‡çš„é—®é¢˜ã€‚
+ * - makeEvaluationConfig: åˆ›å»ºä¸€ä¸ªä¸“é—¨ç”¨äºè¯„ä¼°å•ä¸ªä¸–ä»£æ”¶ç›Šçš„é…ç½®ï¼Œè¯¥é…ç½®ä¸æ‰§è¡Œä»»ä½•æ¼”åŒ–æ­¥éª¤ã€‚
  *
- * II. ÊÊÓ¦¶È£¨Fitness£©¼ÆËã
- * - penalisedFitness: Í¨¹ı´Ó²ßÂÔµÄÆ½¾ùµÃ·ÖÖĞ¼õÈ¥Æä¸´ÔÓĞÔ³Í·£À´¼ÆËã×îÖÕµÄÊÊÓ¦¶È¡£
- * - collectFitness: ½«½õ±êÈüµÄ½á¹ûÓ³ÉäÎªÒ»¸öÊÊÓ¦¶ÈÏòÁ¿£¬ÆäË³ĞòÓëÈ«¾Ö²ßÂÔÁĞ±í£¨config.strategyNames£©±£³ÖÒ»ÖÂ¡£
+ * II. é€‚åº”åº¦ï¼ˆFitnessï¼‰è®¡ç®—
+ * - penalisedFitness: é€šè¿‡ä»ç­–ç•¥çš„å¹³å‡å¾—åˆ†ä¸­å‡å»å…¶å¤æ‚æ€§æƒ©ç½šæ¥è®¡ç®—æœ€ç»ˆçš„é€‚åº”åº¦ã€‚
+ * - collectFitness: å°†é”¦æ ‡èµ›çš„ç»“æœæ˜ å°„ä¸ºä¸€ä¸ªé€‚åº”åº¦å‘é‡ï¼Œå…¶é¡ºåºä¸å…¨å±€ç­–ç•¥åˆ—è¡¨ï¼ˆconfig.strategyNamesï¼‰ä¿æŒä¸€è‡´ã€‚
  *
- * III. ³õÊ¼»¯ÓëÍ³¼Æ¹¹Ôì
- * - initialCounts: ½«³õÊ¼ÖÖÈºÊıÁ¿¾¡¿ÉÄÜ¾ùÔÈµØ·ÖÅä¸øËùÓĞ²ÎÓëµÄ²ßÂÔ¡£
- * - toOrderedCounts: ´´½¨Ò»¸ö°´²ßÂÔÃû³ÆÅÅĞòµÄ (²ßÂÔÃû, ÊıÁ¿) ÁĞ±í¡£
- * - makeGenerationShare: Îªµ¥¸öÊÀ´úÉú³ÉÍ³¼Æ¶ÔÏó£¬°üÀ¨¸÷ÖÖ²ßÂÔµÄ¾ßÌåÊıÁ¿ºÍÖÖÈº·İ¶î¡£
- * - shareForStrategy: ²éÑ¯ÌØ¶¨²ßÂÔÔÚµ±Ç°ÖÖÈºÖĞµÄ·İ¶î¡£
+ * III. åˆå§‹åŒ–ä¸ç»Ÿè®¡æ„é€ 
+ * - initialCounts: å°†åˆå§‹ç§ç¾¤æ•°é‡å°½å¯èƒ½å‡åŒ€åœ°åˆ†é…ç»™æ‰€æœ‰å‚ä¸çš„ç­–ç•¥ã€‚
+ * - toOrderedCounts: åˆ›å»ºä¸€ä¸ªæŒ‰ç­–ç•¥åç§°æ’åºçš„ (ç­–ç•¥å, æ•°é‡) åˆ—è¡¨ã€‚
+ * - makeGenerationShare: ä¸ºå•ä¸ªä¸–ä»£ç”Ÿæˆç»Ÿè®¡å¯¹è±¡ï¼ŒåŒ…æ‹¬å„ç§ç­–ç•¥çš„å…·ä½“æ•°é‡å’Œç§ç¾¤ä»½é¢ã€‚
+ * - shareForStrategy: æŸ¥è¯¢ç‰¹å®šç­–ç•¥åœ¨å½“å‰ç§ç¾¤ä¸­çš„ä»½é¢ã€‚
  *
- * IV. ¸ÅÂÊ¼ÆËãÓëÀëÉ¢·ÖÅä£¨ÖØ²ÉÑù£©
- * - computeProbabilities: ¸ù¾İÊÊÓ¦¶È£¨fitness£©ºÍµ±Ç°¸÷ÖÖÈºÊıÁ¿£¬¼ÆËãÏÂÒ»´úÖĞÃ¿¸ö²ßÂÔ±»Ñ¡ÔñµÄ¸ÅÂÊ¡£
- * ¸Ãº¯ÊıÍ¨¹ıÆ½ÒÆÊÊÓ¦¶ÈÖµÀ´´¦Àí¸ºÊı£¬²¢Îª×ÜÈ¨ÖØÎªÁãµÈ¼«¶ËÇé¿öÌá¹©ÁË»ØÍË»úÖÆ£¨ÏÈÍË»¯Îª°´ÊıÁ¿¼ÓÈ¨£¬ÈôÈÔÎªÁãÔò¾ùÔÈ·Ö²¼£©¡£
- * - allocateNextGeneration: »ùÓÚ¼ÆËã³öµÄ¸ÅÂÊÀ´·ÖÅäÏÂÒ»´úµÄÖÖÈº¡£²ÉÓÃÒ»ÖÖÈ·¶¨ĞÔ·½·¨£¬
- * ÏÈ¶ÔÆÚÍûÊıÁ¿È¡Õû£¬È»ºó¸ù¾İĞ¡Êı²¿·ÖµÄ´óĞ¡ÒÀ´Î·ÖÅäÊ£ÓàÃû¶î£¬ÒÔÈ·±£ÖÖÈº×ÜÊı±£³Ö²»±ä¡£
+ * IV. æ¦‚ç‡è®¡ç®—ä¸ç¦»æ•£åˆ†é…ï¼ˆé‡é‡‡æ ·ï¼‰
+ * - computeProbabilities: æ ¹æ®é€‚åº”åº¦ï¼ˆfitnessï¼‰å’Œå½“å‰å„ç§ç¾¤æ•°é‡ï¼Œè®¡ç®—ä¸‹ä¸€ä»£ä¸­æ¯ä¸ªç­–ç•¥è¢«é€‰æ‹©çš„æ¦‚ç‡ã€‚
+ * è¯¥å‡½æ•°é€šè¿‡å¹³ç§»é€‚åº”åº¦å€¼æ¥å¤„ç†è´Ÿæ•°ï¼Œå¹¶ä¸ºæ€»æƒé‡ä¸ºé›¶ç­‰æç«¯æƒ…å†µæä¾›äº†å›é€€æœºåˆ¶ï¼ˆå…ˆé€€åŒ–ä¸ºæŒ‰æ•°é‡åŠ æƒï¼Œè‹¥ä»ä¸ºé›¶åˆ™å‡åŒ€åˆ†å¸ƒï¼‰ã€‚
+ * - allocateNextGeneration: åŸºäºè®¡ç®—å‡ºçš„æ¦‚ç‡æ¥åˆ†é…ä¸‹ä¸€ä»£çš„ç§ç¾¤ã€‚é‡‡ç”¨ä¸€ç§ç¡®å®šæ€§æ–¹æ³•ï¼Œ
+ * å…ˆå¯¹æœŸæœ›æ•°é‡å–æ•´ï¼Œç„¶åæ ¹æ®å°æ•°éƒ¨åˆ†çš„å¤§å°ä¾æ¬¡åˆ†é…å‰©ä½™åé¢ï¼Œä»¥ç¡®ä¿ç§ç¾¤æ€»æ•°ä¿æŒä¸å˜ã€‚
  *
- * V. ±äÒì»úÖÆ
- * - mutateCounts: ÊµÏÖÖÖÈº±äÒì¡£Ëü½«Ã¿¸ö²ßÂÔµÄÒ»²¿·Ö¸öÌå£¨ÓÉ±äÒìÂÊ¾ö¶¨£©ÖØĞÂ·ÖÅä¸øÆäËû²ßÂÔ¡£
- * ÕâĞ©¡°Ç¨ÒÆÕß¡±µÄÈ¥ÏòÊÇ¸ù¾İÈ«¾ÖµÄÑ¡Ôñ¸ÅÂÊÀ´¾ö¶¨µÄ¡£
+ * V. å˜å¼‚æœºåˆ¶
+ * - mutateCounts: å®ç°ç§ç¾¤å˜å¼‚ã€‚å®ƒå°†æ¯ä¸ªç­–ç•¥çš„ä¸€éƒ¨åˆ†ä¸ªä½“ï¼ˆç”±å˜å¼‚ç‡å†³å®šï¼‰é‡æ–°åˆ†é…ç»™å…¶ä»–ç­–ç•¥ã€‚
+ * è¿™äº›â€œè¿ç§»è€…â€çš„å»å‘æ˜¯æ ¹æ®å…¨å±€çš„é€‰æ‹©æ¦‚ç‡æ¥å†³å®šçš„ã€‚
  *
- * VI. CSV Êä³ö
- * - writeEvolutionSharesCsv: ½«Ã¿Ò»´ú¸÷ÖÖÈº·İ¶îµÄÀúÊ·¼ÇÂ¼Ğ´Èëµ½Ò»¸ö CSV ÎÄ¼şÖĞ£¬±ãÓÚºóĞø·ÖÎö¡£
+ * VI. CSV è¾“å‡º
+ * - writeEvolutionSharesCsv: å°†æ¯ä¸€ä»£å„ç§ç¾¤ä»½é¢çš„å†å²è®°å½•å†™å…¥åˆ°ä¸€ä¸ª CSV æ–‡ä»¶ä¸­ï¼Œä¾¿äºåç»­åˆ†æã€‚
  *
- * VII. Ö÷Á÷³Ì
- * - EvolutionManager::run: ×÷ÎªÈë¿Úº¯Êı£¬¸ºÔğĞ­µ÷²¢Ö´ĞĞÕû¸öÑİ»¯¹ı³Ì£¬
- * ÆäºËĞÄÑ­»·°üÀ¨£ºÆÀ¹À¡¢¼ÆËãÊÊÓ¦¶È¡¢¼ÆËã¸ÅÂÊ¡¢Éú³ÉÏÂÒ»´ú¡¢±äÒì¡¢¼ÇÂ¼¡£
+ * VII. ä¸»æµç¨‹
+ * - EvolutionManager::run: ä½œä¸ºå…¥å£å‡½æ•°ï¼Œè´Ÿè´£åè°ƒå¹¶æ‰§è¡Œæ•´ä¸ªæ¼”åŒ–è¿‡ç¨‹ï¼Œ
+ * å…¶æ ¸å¿ƒå¾ªç¯åŒ…æ‹¬ï¼šè¯„ä¼°ã€è®¡ç®—é€‚åº”åº¦ã€è®¡ç®—æ¦‚ç‡ã€ç”Ÿæˆä¸‹ä¸€ä»£ã€å˜å¼‚ã€è®°å½•ã€‚
  */
+
 
 namespace ipd {
     namespace {
@@ -75,17 +74,18 @@ namespace ipd {
             return r.netMean - penalty * r.complexity;
         }
 
-        std::vector<double> collectFitness(const std::vector<std::string>& names,
+        std::vector<double> collectFitness(
+            const std::vector<std::string>& names,
             const std::vector<Result>& results,
             double penalty) {
             std::map<std::string, double> byName;
-            for (const auto& r : results) {
+            for (const auto& r : results)
                 byName[r.strategy] = penalisedFitness(r, penalty);
-            }
+
             std::vector<double> fitness(names.size(), 0.0);
             for (std::size_t i = 0; i < names.size(); ++i) {
-                auto it = byName.find(names[i]);
-                if (it != byName.end()) fitness[i] = it->second;
+                if (auto it = byName.find(names[i]); it != byName.end())
+                    fitness[i] = it->second;
             }
             return fitness;
         }
@@ -103,49 +103,55 @@ namespace ipd {
             return counts;
         }
 
-        std::vector<std::pair<std::string, int>> toOrderedCounts(const std::vector<std::string>& names,
-            const std::vector<int>& counts) {
+        std::vector<std::pair<std::string, int>> toOrderedCounts(
+            const std::vector<std::string>& names,
+            const std::vector<int>& counts)
+        {
             std::vector<std::pair<std::string, int>> ordered;
-            ordered.reserve(names.size());
-            for (std::size_t i = 0; i < names.size(); ++i) {
-                const int c = (i < counts.size() ? counts[i] : 0);
-                ordered.emplace_back(names[i], c);
-            }
-            std::sort(ordered.begin(), ordered.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+            for (std::size_t i = 0; i < names.size(); ++i)
+                ordered.emplace_back(names[i], i < counts.size() ? counts[i] : 0);
+            std::sort(ordered.begin(), ordered.end(),
+                [](auto& a, auto& b) { return a.first < b.first; });
             return ordered;
         }
 
-        GenerationShare makeGenerationShare(int generation,
+        GenerationShare makeGenerationShare(
+            int generation,
             const std::vector<std::string>& names,
             const std::vector<int>& counts,
-            int population) {
+            int population)
+        {
             GenerationShare g;
             g.generation = generation;
             g.counts = toOrderedCounts(names, counts);
             g.shares.reserve(g.counts.size());
             const double total = static_cast<double>(std::max(population, 0));
             for (const auto& [name, cnt] : g.counts) {
-                const double ratio = (total > 0.0) ? (static_cast<double>(cnt) / total) : 0.0;
+                const double ratio = (total > 0.0)
+                    ? static_cast<double>(cnt) / total
+                    : 0.0;
                 g.shares.emplace_back(name, ratio);
             }
             return g;
         }
 
-        double shareForStrategy(const std::vector<std::string>& names,
+        double shareForStrategy(
+            const std::vector<std::string>& names,
             const std::vector<int>& counts,
             int population,
-            const std::string& strategy) {
+            const std::string& strategy)
+        {
             if (population <= 0) return 0.0;
-            for (std::size_t i = 0; i < names.size() && i < counts.size(); ++i) {
-                if (names[i] == strategy) {
+            for (std::size_t i = 0; i < names.size() && i < counts.size(); ++i)
+                if (names[i] == strategy)
                     return static_cast<double>(counts[i]) / static_cast<double>(population);
-                }
-            }
             return 0.0;
         }
 
-        std::vector<double> computeProbabilities(const std::vector<int>& counts,
-            const std::vector<double>& fitness) {
+        std::vector<double> computeProbabilities(
+            const std::vector<int>& counts,
+            const std::vector<double>& fitness)
+        {
             const std::size_t n = counts.size();
             if (n == 0) return {};
 
@@ -162,143 +168,69 @@ namespace ipd {
             }
 
             if (total <= 0.0) {
-                total = 0.0;
-                for (std::size_t i = 0; i < n; ++i) {
-                    const double w = static_cast<double>(std::max(counts[i], 0));
-                    weights[i] = w;
-                    total += w;
-                }
-                if (total <= 0.0) {
-                    const double u = 1.0 / static_cast<double>(n);
-                    return std::vector<double>(n, u);
-                }
+                for (std::size_t i = 0; i < n; ++i)
+                    weights[i] = static_cast<double>(std::max(counts[i], 0));
+                total = std::accumulate(weights.begin(), weights.end(), 0.0);
+                if (total <= 0.0)
+                    return std::vector<double>(n, 1.0 / static_cast<double>(n));
             }
 
             std::vector<double> p(n, 0.0);
             for (std::size_t i = 0; i < n; ++i) p[i] = weights[i] / total;
             return p;
         }
+    }   
 
-        std::vector<int> allocateNextGeneration(const std::vector<double>& probabilities,
-            int population) {
-            const std::size_t n = probabilities.size();
-            std::vector<int> counts(n, 0);
-            if (n == 0 || population <= 0) return counts;
+    // ---------------------- EvolutionManager Implementation ----------------------
 
-            std::vector<double> expected(n, 0.0);
-            int assigned = 0;
-            for (std::size_t i = 0; i < n; ++i) {
-                const double e = probabilities[i] * static_cast<double>(population);
-                expected[i] = e;
-                const int base = static_cast<int>(std::floor(e));
-                counts[i] = base;
-                assigned += base;
-            }
+    EvolutionManager::EvolutionManager() : m_random() {}
 
-            int remainder = population - assigned;
-            if (remainder == 0) return counts;
+    std::vector<int> EvolutionManager::sampleNextGeneration(
+        const std::vector<double>& probabilities, int population)
+    {
+        const std::size_t n = probabilities.size();
+        std::vector<int> counts(n, 0);
+        if (n == 0 || population <= 0) return counts;
 
-            struct Fractional { std::size_t index; double frac; };
-            std::vector<Fractional> fracs;
-            fracs.reserve(n);
-            for (std::size_t i = 0; i < n; ++i) {
-                const double frac = expected[i] - static_cast<double>(counts[i]);
-                fracs.push_back(Fractional{ i, frac });
-            }
-
-            std::sort(fracs.begin(), fracs.end(), [](const Fractional& a, const Fractional& b) {
-                if (std::abs(a.frac - b.frac) <= kEpsilon) return a.index < b.index;
-                return a.frac > b.frac;
-                });
-
-            if (remainder > 0) {
-                const int give = std::min<int>(remainder, static_cast<int>(fracs.size()));
-                for (int k = 0; k < give; ++k) counts[fracs[k].index] += 1;
-            }
-            else {
-                const int take = std::min<int>(-remainder, static_cast<int>(fracs.size()));
-                for (int k = 0; k < take; ++k) {
-                    const std::size_t idx = fracs[fracs.size() - 1 - k].index;
-                    if (counts[idx] > 0) counts[idx] -= 1;
-                }
-            }
-            return counts;
+        std::discrete_distribution<int> dist(probabilities.begin(), probabilities.end());
+        for (int i = 0; i < population; ++i) {
+            int idx = dist(m_random.engine());
+            ++counts[idx];
         }
+        return counts;
+    }
 
-        void mutateCounts(std::vector<int>& counts,
-            double mutationRate,
-            const std::vector<double>& probabilities) {
-            const std::size_t n = counts.size();
-            if (n <= 1 || mutationRate <= 0.0) return;
+    void EvolutionManager::mutateCounts(
+        std::vector<int>& counts,
+        double mutationRate,
+        const std::vector<double>& probabilities)
+    {
+		(void)probabilities;// currently unused
+        const std::size_t n = counts.size();
+        if (n <= 1 || mutationRate <= 0.0) return;
 
-            std::vector<int> migrants(n, 0);
-            int totalMigrants = 0;
-            for (std::size_t i = 0; i < n; ++i) {
-                const int c = counts[i];
-                if (c <= 0) { migrants[i] = 0; continue; }
-                int m = static_cast<int>(std::llround(static_cast<double>(c) * mutationRate));
-                m = std::clamp(m, 0, c);
-                migrants[i] = m;
-                counts[i] -= m;
-                totalMigrants += m;
-            }
-            if (totalMigrants == 0) return;
-
-            std::vector<double> incoming(n, 0.0);
-            for (std::size_t src = 0; src < n; ++src) {
-                const int m = migrants[src];
-                if (m == 0) continue;
-
-                double denom = 0.0;
-                for (std::size_t t = 0; t < n; ++t) if (t != src && t < probabilities.size()) denom += probabilities[t];
-
-                if (denom <= 0.0) {
-                    const double share = 1.0 / static_cast<double>(n - 1);
-                    for (std::size_t t = 0; t < n; ++t) if (t != src) incoming[t] += static_cast<double>(m) * share;
-                    continue;
-                }
-
-                for (std::size_t t = 0; t < n; ++t) {
-                    if (t == src) continue;
-                    const double p = (t < probabilities.size() ? probabilities[t] : 0.0) / denom;
-                    incoming[t] += static_cast<double>(m) * p;
-                }
-            }
-
-            std::vector<std::pair<std::size_t, double>> remainders;
-            remainders.reserve(n);
-            int assigned = 0;
-            for (std::size_t i = 0; i < n; ++i) {
-                const int base = static_cast<int>(std::floor(incoming[i]));
-                counts[i] += base;
-                assigned += base;
-                remainders.emplace_back(i, incoming[i] - static_cast<double>(base));
-            }
-
-            int remain = totalMigrants - assigned;
-            if (remain > 0) {
-                std::sort(remainders.begin(), remainders.end(), [](const auto& a, const auto& b) {
-                    if (std::abs(a.second - b.second) <= kEpsilon) return a.first < b.first;
-                    return a.second > b.second;
-                    });
-                const int give = std::min<int>(remain, static_cast<int>(remainders.size()));
-                for (int k = 0; k < give; ++k) counts[remainders[k].first] += 1;
+        for (std::size_t i = 0; i < n; ++i) {
+            int c = counts[i];
+            if (c <= 0) continue;
+            int m = static_cast<int>(std::round(static_cast<double>(c) * mutationRate));
+            for (int k = 0; k < m; ++k) {
+                int target;
+                do { target = m_random.nextInt(0, (int)n - 1); } while (target == (int)i);
+                --counts[i];
+                ++counts[target];
             }
         }
-    } 
+    }
 
-    EvolutionOutcome EvolutionManager::run(const Config& config) const {
+    EvolutionOutcome EvolutionManager::run(const Config& config) {
         EvolutionOutcome out;
-
         if (!config.evolve && config.generations <= 0) return out;
 
         registerBuiltinStrategies();
-
-        const std::size_t strategyCount = config.strategyNames.size();
-        if (strategyCount == 0) return out;
+        const std::size_t n = config.strategyNames.size();
+        if (n == 0) return out;
 
         const int population = std::max(config.populationSize, 0);
-
         std::vector<int> counts = initialCounts(config.strategyNames, population);
 
         TournamentManager tm;
@@ -310,12 +242,10 @@ namespace ipd {
         for (int gen = 0; gen < config.generations; ++gen) {
             lastFitness = tm.run(evalCfg);
 
-            const std::vector<double> fitness = collectFitness(config.strategyNames, lastFitness, config.complexityPenalty);
+            const auto fitness = collectFitness(config.strategyNames, lastFitness, config.complexityPenalty);
+            const auto probs = computeProbabilities(counts, fitness);
 
-            const std::vector<double> probs = computeProbabilities(counts, fitness);
-
-            std::vector<int> nextCounts = allocateNextGeneration(probs, population);
-
+            std::vector<int> nextCounts = sampleNextGeneration(probs, population);
             mutateCounts(nextCounts, config.mutationRate, probs);
 
             counts = std::move(nextCounts);
@@ -323,10 +253,8 @@ namespace ipd {
         }
 
         if (lastFitness.empty()) lastFitness = tm.run(evalCfg);
-
-        for (auto& r : lastFitness) {
+        for (auto& r : lastFitness)
             r.extra = shareForStrategy(config.strategyNames, counts, population, r.strategy);
-        }
 
         out.results = std::move(lastFitness);
         return out;
@@ -336,27 +264,28 @@ namespace ipd {
         if (history.empty()) return;
 
         namespace fs = std::filesystem;
-        fs::path out = config.outputFile.empty() ? fs::path("evolution_shares.csv")
+        fs::path out = config.outputFile.empty()
+            ? fs::path("evolution_shares.csv")
             : fs::path(config.outputFile).parent_path() / "evolution_shares.csv";
-        if (!out.parent_path().empty() && !fs::exists(out.parent_path())) {
+
+        if (!out.parent_path().empty() && !fs::exists(out.parent_path()))
             fs::create_directories(out.parent_path());
-        }
 
         std::ofstream os(out, std::ios::trunc);
-        if (!os) throw std::runtime_error("Unable to write evolution share log: " + out.string());
+        if (!os)
+            throw std::runtime_error("Unable to write evolution share log: " + out.string());
 
         os << "generation,strategy,count,share\n";
         for (const auto& g : history) {
             std::map<std::string, int> countLookup;
-            for (const auto& kv : g.counts) countLookup[kv.first] = kv.second;
+            for (const auto& kv : g.counts)
+                countLookup[kv.first] = kv.second;
+
             for (const auto& kv : g.shares) {
-                const std::string& name = kv.first;
-                const double share = kv.second;
-                const int cnt = countLookup[name];
-                os << g.generation << ',' << name << ',' << cnt << ','
-                    << std::fixed << std::setprecision(6) << share << '\n';
+                os << g.generation << ',' << kv.first << ','
+                    << countLookup[kv.first] << ','
+                    << std::fixed << std::setprecision(6) << kv.second << '\n';
             }
         }
     }
-
-} 
+}
