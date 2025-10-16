@@ -13,48 +13,6 @@
 #include "TournamentManager.h"
 #include "StrategyFactory.h"
 
-/**
- * @file EvolutionManager.cpp
- * @brief 实现了迭代囚徒困境（IPD）策略的演化模拟功能。
- *
- * 该文件包含了运行一个世代模拟的核心逻辑，其中策略的种群根据其在锦标赛中的表现进行演化。
- * 整个过程包括适应度评估、选择、繁殖和变异。
- *
- * --- 核心组件概述 ---
- *
- * I. 参数与常量
- * - kEpsilon: 一个微小常量，用于防止计算中出现除以零或负权重的问题。
- * - makeEvaluationConfig: 创建一个专门用于评估单个世代收益的配置，该配置不执行任何演化步骤。
- *
- * II. 适应度（Fitness）计算
- * - penalisedFitness: 通过从策略的平均得分中减去其复杂性惩罚来计算最终的适应度。
- * - collectFitness: 将锦标赛的结果映射为一个适应度向量，其顺序与全局策略列表（config.strategyNames）保持一致。
- *
- * III. 初始化与统计构造
- * - initialCounts: 将初始种群数量尽可能均匀地分配给所有参与的策略。
- * - toOrderedCounts: 创建一个按策略名称排序的 (策略名, 数量) 列表。
- * - makeGenerationShare: 为单个世代生成统计对象，包括各种策略的具体数量和种群份额。
- * - shareForStrategy: 查询特定策略在当前种群中的份额。
- *
- * IV. 概率计算与离散分配（重采样）
- * - computeProbabilities: 根据适应度（fitness）和当前各种群数量，计算下一代中每个策略被选择的概率。
- * 该函数通过平移适应度值来处理负数，并为总权重为零等极端情况提供了回退机制（先退化为按数量加权，若仍为零则均匀分布）。
- * - allocateNextGeneration: 基于计算出的概率来分配下一代的种群。采用一种确定性方法，
- * 先对期望数量取整，然后根据小数部分的大小依次分配剩余名额，以确保种群总数保持不变。
- *
- * V. 变异机制
- * - mutateCounts: 实现种群变异。它将每个策略的一部分个体（由变异率决定）重新分配给其他策略。
- * 这些“迁移者”的去向是根据全局的选择概率来决定的。
- *
- * VI. CSV 输出
- * - writeEvolutionSharesCsv: 将每一代各种群份额的历史记录写入到一个 CSV 文件中，便于后续分析。
- *
- * VII. 主流程
- * - EvolutionManager::run: 作为入口函数，负责协调并执行整个演化过程，
- * 其核心循环包括：评估、计算适应度、计算概率、生成下一代、变异、记录。
- */
-
-
 namespace ipd {
     namespace {
 
@@ -180,8 +138,6 @@ namespace ipd {
             return p;
         }
     }   
-
-    // ---------------------- EvolutionManager Implementation ----------------------
 
     EvolutionManager::EvolutionManager() : m_random() {}
 
