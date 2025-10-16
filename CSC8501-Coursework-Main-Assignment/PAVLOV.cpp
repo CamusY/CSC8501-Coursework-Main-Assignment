@@ -24,6 +24,6 @@ namespace ipd {
     }
 
     double PAVLOV::complexity() const {
-        return 2.5;
+        return 2.0;
     }
 }

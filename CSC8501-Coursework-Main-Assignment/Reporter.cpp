@@ -65,6 +65,21 @@ namespace ipd {
                     s << std::fixed << std::setprecision(3) << r.ciHigh;
                     return s.str();
                 } },
+                { "CoopRate", 12, false, [](const Result& r) {
+                    std::ostringstream s;
+                    s << std::fixed << std::setprecision(3) << r.coopRate;
+                    return s.str();
+                } },
+                { "FirstDef", 12, false, [](const Result& r) {
+                    std::ostringstream s;
+                    s << std::fixed << std::setprecision(3) << r.firstDefection;
+                    return s.str();
+                } },
+                { "EchoLen", 12, false, [](const Result& r) {
+                    std::ostringstream s;
+                    s << std::fixed << std::setprecision(3) << r.echoLength;
+                    return s.str();
+                } },
                 { "Complexity", 12, false, [](const Result& r) {
                     std::ostringstream s;
                     s << std::fixed << std::setprecision(3) << r.complexity;
@@ -177,7 +192,7 @@ namespace ipd {
         void writeCsvReport(const Config& config, const std::vector<Result>& results) {
             std::ofstream file;
             std::ostream& stream = prepareStream(config, file);
-            stream << "strategy,mean,stdev,ci95_low,ci95_high,repeats,seed,epsilon,payoffs,complexity,samples,share\n";
+            stream << "strategy,mean,stdev,ci95_low,ci95_high,coop_rate,first_defection,echo_length,repeats,seed,epsilon,payoffs,complexity,samples,share\n";
             const std::string payoffs = std::to_string(config.payoffs.T) + ',' + std::to_string(config.payoffs.R) + ',' +
                 std::to_string(config.payoffs.P) + ',' + std::to_string(config.payoffs.S);
             for (const auto& result : results) {
@@ -186,6 +201,9 @@ namespace ipd {
                     << result.stdev << ','
                     << result.ciLow << ','
                     << result.ciHigh << ','
+                    << result.coopRate << ','
+                    << result.firstDefection << ','
+                    << result.echoLength << ','
                     << config.repeats << ','
                     << (config.useSeed ? std::to_string(config.seed) : std::string()) << ','
                     << config.epsilon << ','
@@ -246,6 +264,9 @@ namespace ipd {
                 stream << "      \"stdev\": " << result.stdev << ",\n";
                 stream << "      \"ci95_low\": " << result.ciLow << ",\n";
                 stream << "      \"ci95_high\": " << result.ciHigh << ",\n";
+				stream << "      \"coop_rate\": " << result.coopRate << ",\n";
+				stream << "      \"first_defection\": " << result.firstDefection << ",\n";
+				stream << "      \"echo_length\": " << result.echoLength << ",\n";
                 stream << "      \"complexity\": " << result.complexity << ",\n";
                 stream << "      \"samples\": " << result.samples << ",\n";
                 stream << "      \"share\": " << result.extra << ",\n";

@@ -47,6 +47,6 @@ namespace ipd {
     }
 
     double PROBER::complexity() const {
-        return 4.0;
+        return 3.0;
     }
 }

@@ -87,6 +87,7 @@ namespace ipd {
         factory.registerStrategy("PAVLOV", []() { return std::make_unique<PAVLOV>(); });
         factory.registerStrategy("RND", []() { return std::make_unique<RND>(0.5); });
         factory.registerStrategy("CTFT", []() { return std::make_unique<CTFT>(); });
+        factory.registerStrategy("CONTRITE", []() { return std::make_unique<CTFT>(); });
         factory.registerStrategy("PROBER", []() { return std::make_unique<PROBER>(); });
         factory.registerStrategy("Empath", []() { return std::make_unique<Empath>(); });
         factory.registerStrategy("Reflector", []() { return std::make_unique<Reflector>(); });
