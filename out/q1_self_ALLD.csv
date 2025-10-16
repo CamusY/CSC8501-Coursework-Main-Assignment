@@ -1,0 +1,2 @@
+strategy,mean,stdev,ci95_low,ci95_high,coop_rate,first_defection,echo_length,repeats,seed,epsilon,payoffs,complexity,samples,share
+"ALLD",1.000000,0.000000,1.000000,1.000000,0.000000,1.000000,100.000000,30,42,0.000000,"5.000000,3.000000,1.000000,0.000000",1.000000,60,0.000000

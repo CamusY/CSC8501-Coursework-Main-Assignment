@@ -1,0 +1,111 @@
+{
+  "meta": {
+    "rounds": 100,
+    "repeats": 30,
+    "epsilon": 0,
+    "payoffs": [5,3,1,0],
+    "seed": 42,
+    "strategies": ["ALLC","ALLD","TFT","GRIM","PAVLOV","Empath","Reflector"],
+    "scb_enabled": false
+  },
+  "results": [
+    {
+      "strategy": "Empath",
+      "mean": 2.66824,
+      "stdev": 0.699325,
+      "ci95_low": 2.60136,
+      "ci95_high": 2.73512,
+      "coop_rate": 0.827833,
+      "first_defection": 2.44167,
+      "echo_length": 13.7639,
+      "complexity": 3,
+      "samples": 420,
+      "share": 0,
+      "repeats": 30
+    },
+    {
+      "strategy": "TFT",
+      "mean": 2.66683,
+      "stdev": 0.701666,
+      "ci95_low": 2.59973,
+      "ci95_high": 2.73394,
+      "coop_rate": 0.826405,
+      "first_defection": 2.40833,
+      "echo_length": 17.3502,
+      "complexity": 2,
+      "samples": 420,
+      "share": 0,
+      "repeats": 30
+    },
+    {
+      "strategy": "PAVLOV",
+      "mean": 2.65443,
+      "stdev": 0.702236,
+      "ci95_low": 2.58727,
+      "ci95_high": 2.72159,
+      "coop_rate": 0.819167,
+      "first_defection": 2.53333,
+      "echo_length": 16.5394,
+      "complexity": 2,
+      "samples": 420,
+      "share": 0,
+      "repeats": 30
+    },
+    {
+      "strategy": "GRIM",
+      "mean": 2.52567,
+      "stdev": 0.777841,
+      "ci95_low": 2.45128,
+      "ci95_high": 2.60006,
+      "coop_rate": 0.719738,
+      "first_defection": 2.90833,
+      "echo_length": 99.0917,
+      "complexity": 2,
+      "samples": 420,
+      "share": 0,
+      "repeats": 30
+    },
+    {
+      "strategy": "ALLC",
+      "mean": 2.49721,
+      "stdev": 1.03743,
+      "ci95_low": 2.398,
+      "ci95_high": 2.59643,
+      "coop_rate": 1,
+      "first_defection": null,
+      "echo_length": 8.82379,
+      "complexity": 1,
+      "samples": 420,
+      "share": 0,
+      "repeats": 30
+    },
+    {
+      "strategy": "Reflector",
+      "mean": 2.25567,
+      "stdev": 0.91815,
+      "ci95_low": 2.16786,
+      "ci95_high": 2.34348,
+      "coop_rate": 0.598667,
+      "first_defection": 2.14524,
+      "echo_length": 7.74683,
+      "complexity": 3,
+      "samples": 420,
+      "share": 0,
+      "repeats": 30
+    },
+    {
+      "strategy": "ALLD",
+      "mean": 1.67238,
+      "stdev": 1.37311,
+      "ci95_low": 1.54106,
+      "ci95_high": 1.8037,
+      "coop_rate": 0,
+      "first_defection": 1,
+      "echo_length": 100,
+      "complexity": 1,
+      "samples": 420,
+      "share": 0,
+      "repeats": 30
+    }
+  ]
+}
