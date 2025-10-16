@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <ostream>
 namespace ipd {
     enum class Move {
         Cooperate,
@@ -7,4 +8,5 @@ namespace ipd {
     };
     std::string toString(Move move);
     Move flip(Move move);
+	std::ostream& operator<<(std::ostream& os, Move move);
 }

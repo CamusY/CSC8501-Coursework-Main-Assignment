@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <optional>
 #include <string>
+#include <ostream>
 
 namespace ipd {
     struct Result {
@@ -24,4 +25,5 @@ namespace ipd {
         std::string toString() const;
         std::string toCsv() const;
     };
+	std::ostream& operator<<(std::ostream& os, const Result& result);
 }

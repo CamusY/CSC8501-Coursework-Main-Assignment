@@ -42,4 +42,7 @@ namespace ipd {
             << complexity << ',' << samples << ',' << extra;
         return stream.str();
     }
+    std::ostream& operator<<(std::ostream& os, const Result& result) {
+        return os << result.toString();
+	}
 }
