@@ -11,6 +11,7 @@ namespace ipd {
     struct GenerationShare {
         int generation = 0;
         std::vector<std::pair<std::string, double>> shares;
+        std::vector<std::pair<std::string, int>> counts;
     };
 
     struct EvolutionOutcome {
